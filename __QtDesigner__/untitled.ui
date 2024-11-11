@@ -1,0 +1,858 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1920</width>
+    <height>1080</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <property name="tabShape">
+   <enum>QTabWidget::Rounded</enum>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="styleSheet">
+    <string notr="true">background-color: black</string>
+   </property>
+   <widget class="QWidget" name="horizontalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>70</y>
+      <width>1901</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="progress_bar_h_layout">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <item>
+      <layout class="QVBoxLayout" name="marker_data_load_progress_layout">
+       <property name="sizeConstraint">
+        <enum>QLayout::SetFixedSize</enum>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="marker_raw_data_load_layout">
+         <item>
+          <spacer name="marker_raw_data_load_spacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="marker_raw_data_load_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: white
+</string>
+           </property>
+           <property name="text">
+            <string>Raw data   </string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="marker_raw_data_load_progress_bar">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+             <weight>50</weight>
+             <bold>false</bold>
+             <strikeout>false</strikeout>
+            </font>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::LeftToRight</enum>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QProgressBar{
+border-top: 1px solid rgb(76, 76, 76);
+border-bottom: 1px solid rgb(76, 76, 76);
+border-left: none;
+border-right: none;
+border-radius: 0px;
+padding: 5px 0px;
+background-color:rgba(0, 0, 0, 50);
+text-align: right;
+color: white;
+}
+
+QProgressBar::chunk {
+background-color: rgba(255, 255, 255, 100);
+    width: 2.15px;
+    margin: 0.5px;
+}</string>
+           </property>
+           <property name="value">
+            <number>24</number>
+           </property>
+           <property name="textVisible">
+            <bool>false</bool>
+           </property>
+           <property name="invertedAppearance">
+            <bool>false</bool>
+           </property>
+           <property name="format">
+            <string>%p %</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="marker_raw_data_load_progress_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgba(255, 255, 255, 150)</string>
+           </property>
+           <property name="text">
+            <string>100%</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="marker_transformed_data_load_layout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <spacer name="marker_transformed_data_load_spacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="marker_transformed_data_load_label">
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: white</string>
+           </property>
+           <property name="text">
+            <string>Transformed data   </string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="marker_transformed_data_load_progress_bar">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QProgressBar{
+border-top: 1px solid rgb(76, 76, 76);
+border-bottom: 1px solid rgb(76, 76, 76);
+border-left: none;
+border-right: none;
+border-radius: 0px;
+padding: 5px 0px;
+background-color:rgba(0, 0, 0, 50);
+text-align: right;
+color: white;
+}
+
+QProgressBar::chunk {
+background-color: rgba(255, 255, 255, 100);
+    width: 2.15px;
+    margin: 0.5px;
+}</string>
+           </property>
+           <property name="value">
+            <number>24</number>
+           </property>
+           <property name="textVisible">
+            <bool>false</bool>
+           </property>
+           <property name="format">
+            <string>%p %</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="marker_transformed_data_load_progress_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgba(255, 255, 255, 150)</string>
+           </property>
+           <property name="text">
+            <string>100%</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::AutoText</enum>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="sensor_data_load_progress_layout">
+       <property name="sizeConstraint">
+        <enum>QLayout::SetDefaultConstraint</enum>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="sensor_raw_data_load_layout">
+         <item>
+          <spacer name="sensor_raw_data_load_spacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="sensor_raw_data_load_label">
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: white</string>
+           </property>
+           <property name="text">
+            <string>Raw data   </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="sensor_raw_data_load_progress_bar">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium Light</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QProgressBar{
+border-top: 1px solid rgb(76, 76, 76);
+border-bottom: 1px solid rgb(76, 76, 76);
+border-left: none;
+border-right: none;
+border-radius: 0px;
+padding: 5px 0px;
+background-color:rgba(0, 0, 0, 50);
+text-align: right;
+color: white;
+}
+
+QProgressBar::chunk {
+background-color: rgba(255, 255, 255, 100);
+    width: 2.15px;
+    margin: 0.5px;
+}</string>
+           </property>
+           <property name="value">
+            <number>24</number>
+           </property>
+           <property name="textVisible">
+            <bool>false</bool>
+           </property>
+           <property name="format">
+            <string>%p %</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="sensor_raw_data_load_progress_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgba(255, 255, 255, 150)</string>
+           </property>
+           <property name="text">
+            <string>100%</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="sensor_refined_data_load_layout">
+         <item>
+          <spacer name="sensor_refined_data_load_spacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="sensor_refined_data_load_label">
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: white</string>
+           </property>
+           <property name="text">
+            <string>Refined data   </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="sensor_refined_data_load_progress_bar">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>470</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>430</width>
+             <height>10</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QProgressBar{
+border-top: 1px solid rgb(76, 76, 76);
+border-bottom: 1px solid rgb(76, 76, 76);
+border-left: none;
+border-right: none;
+border-radius: 0px;
+padding: 5px 0px;
+background-color:rgba(0, 0, 0, 50);
+text-align: right;
+color: white;
+}
+
+QProgressBar::chunk {
+background-color: rgba(255, 255, 255, 100);
+    width: 2.15px;
+    margin: 0.5px;
+}</string>
+           </property>
+           <property name="value">
+            <number>24</number>
+           </property>
+           <property name="textVisible">
+            <bool>false</bool>
+           </property>
+           <property name="format">
+            <string>%p %</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="sensor_refined_data_load_progress_label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Oxanium</family>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgba(255, 255, 255, 150)</string>
+           </property>
+           <property name="text">
+            <string>100%</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="data_sync_layout">
+       <item>
+        <spacer name="data_sync_spacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>0</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="data_sync_label">
+         <property name="font">
+          <font>
+           <family>Oxanium</family>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: white</string>
+         </property>
+         <property name="text">
+          <string>Data sync   </string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="data_sync_progress_bar">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>470</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>470</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>Oxanium</family>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QProgressBar{
+border-top: 1px solid rgb(76, 76, 76);
+border-bottom: 1px solid rgb(76, 76, 76);
+border-left: none;
+border-right: none;
+border-radius: 0px;
+padding: 5px 0px;
+background-color:rgba(0, 0, 0, 50);
+text-align: right;
+color: white;
+}
+
+QProgressBar::chunk {
+background-color: rgba(255, 255, 255, 100);
+    width: 2.15px;
+    margin: 0.5px;
+}</string>
+         </property>
+         <property name="value">
+          <number>24</number>
+         </property>
+         <property name="textVisible">
+          <bool>false</bool>
+         </property>
+         <property name="format">
+          <string>%p %</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="data_sync_progress_label">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>Oxanium</family>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: rgba(255, 255, 255, 150)</string>
+         </property>
+         <property name="text">
+          <string>100%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>1901</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="title_layout">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <item>
+      <widget class="QLabel" name="marker_data_load_progress_title_label">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="font">
+        <font>
+         <family>Oxanium</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: white
+</string>
+       </property>
+       <property name="text">
+        <string>Marker data load progress</string>
+       </property>
+       <property name="textFormat">
+        <enum>Qt::AutoText</enum>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="sensor_data_load_progress_title_label">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="font">
+        <font>
+         <family>Oxanium</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: white</string>
+       </property>
+       <property name="text">
+        <string>Sensor data load progress</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="data_sync_progress_title_label">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="font">
+        <font>
+         <family>Oxanium</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: white</string>
+       </property>
+       <property name="text">
+        <string>Data sync progress</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget_8">
+    <property name="geometry">
+     <rect>
+      <x>9</x>
+      <y>139</y>
+      <width>1901</width>
+      <height>861</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="plot_layout"/>
+   </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget_9">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>1901</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="main_title_layout">
+     <item>
+      <widget class="QLabel" name="main_title_label">
+       <property name="font">
+        <font>
+         <family>Oxanium</family>
+         <pointsize>12</pointsize>
+         <weight>50</weight>
+         <bold>false</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: white;
+background-color: rgba(76, 76, 76, 76);</string>
+       </property>
+       <property name="text">
+        <string>Main title</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1920</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuLayout">
+    <property name="title">
+     <string>Layout</string>
+    </property>
+    <addaction name="actionData_sync"/>
+    <addaction name="actionTest_data_split"/>
+    <addaction name="actionData_load"/>
+   </widget>
+   <addaction name="menuLayout"/>
+  </widget>
+  <action name="actionData_sync">
+   <property name="text">
+    <string>Data sync</string>
+   </property>
+  </action>
+  <action name="actionTest_data_split">
+   <property name="text">
+    <string>Test data split</string>
+   </property>
+  </action>
+  <action name="actionData_load">
+   <property name="text">
+    <string>Data load</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
