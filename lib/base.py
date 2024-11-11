@@ -182,11 +182,13 @@ def split_dataframe(df, index, axis=0):
                 data_length = len(df)-target_index[i]
                 df_temp = pd.DataFrame("", index=range(data_length), columns=df.columns)
                 df_temp = df.iloc[target_index[i]:len(df)].reset_index(drop=True)
+                df_temp.iloc[:, 0] = df_temp.iloc[:, 0] - df_temp.iloc[0, 0]
                 df_output.append(df_temp)
             else:
                 data_length = target_index[i+1]-target_index[i]
                 df_temp = pd.DataFrame("", index=range(data_length), columns=df.columns)
                 df_temp = df.iloc[target_index[i]:target_index[i+1]].reset_index(drop=True)
+                df_temp.iloc[:, 0] = df_temp.iloc[:, 0] - df_temp.iloc[0, 0]
                 df_output.append(df_temp)
                 
     elif axis == 1: # 열 방향으로 분리
@@ -215,7 +217,7 @@ def split_dataframe(df, index, axis=0):
     return df_output
 
 def find_column_from_label(df, target_label):
-    column_indices = [i for i, col in enumerate(df.columns) if target_label in col]
+    column_indices = [i for i, col in enumerate(df.columns) if col == target_label + "X" or col == target_label + "Y" or col == target_label + "Z"]
     return column_indices
 
 def find_index_from_list(list, value):

@@ -1,12 +1,12 @@
 from .common import *
 import copy
 
-class WorkerThread(QThread):
+class WorkerThread(BackgroundThreadWorker):
     finished = pyqtSignal(bool, int, int, dict, dict, Exception)  # 작업 완료 시그널
-    progress_changed = pyqtSignal(float)
+    # progress_changed = pyqtSignal(float)
 
-    def __init__(self, json_data_manager, target_data_keys, marker_labels, window_size, progress_dialog):
-        super().__init__()
+    def __init__(self, json_data_manager, target_data_keys, marker_labels, window_size, progress_dialog, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.json_data_manager = json_data_manager
         self.target_data_keys = target_data_keys
 
@@ -36,13 +36,16 @@ class WorkerThread(QThread):
             normalized_v = v  # 벡터의 크기가 0인 경우 정규화를 하지 않음
         return normalized_v
     
-    def __refine_marker_data(self, index, total_count, df):
+    def __refine_marker_data(self, key, index, total_count, df):
         p1_index = find_column_from_label(df, self.coordinate_marker_1_label)
         p2_index = find_column_from_label(df, self.coordinate_marker_2_label)
         p3_index = find_column_from_label(df, self.coordinate_marker_3_label)
         
-        if len(p1_index) != 3 or len(p2_index) != 3 or len(p3_index) != 3:
-            return None
+        if len(p1_index) < 3 or len(p2_index) < 3 or len(p3_index) < 3:
+            return None, Exception(f"The coordinate marker is not included in the marker data : {key}")
+        
+        if len(p1_index) > 3 or len(p2_index) > 3 or len(p3_index) > 3:
+            return None, Exception(f"There are too many markers with the name 'coordinate marker' in the marker data : {key}")
         
         row_num = df.shape[0]
         marker_num = int((df.shape[1]-1)/3)
@@ -65,14 +68,19 @@ class WorkerThread(QThread):
             # 포인트 데이터에 변환 행렬 곱한 후 (좌표 변환) 데이터 저장
             for j in range(marker_num):
                 df.iloc[i, [j*3+1, j*3+2, j*3+3]] = np.dot(df.iloc[i, [j*3+1, j*3+2, j*3+3]].to_numpy() - p2, transformation_matrix)
-            self.progress_changed.emit((i/(row_num-1))*((index+1)/total_count)*self.marker_sensor_progress_ratio*100)
+            
+            self.update_progress((i / (row_num - 1)) * ((index + 1) / total_count) * self.marker_sensor_progress_ratio * 100)
+            
+            # flag 변경 시 작업 중도 정지
+            if not self._is_running:
+                return None, Exception("The operation was canceled by the user.")
 
-        return df
+        return df, Exception()
 
-    def __refine_sensor_data(self, index, total_count, df):
+    def __refine_sensor_data(self, key, index, total_count, df):
         # Time 열만 있는 경우
         if (df.shape[1] < 2):
-            return None
+            return None, Exception(f"There is only Time data in the sensor data column : {key}")
 
         # Time 열을 second 단위로 변환
         df["Time (ms)"].astype(float)
@@ -83,11 +91,16 @@ class WorkerThread(QThread):
         sensor_num = df.shape[1]-1
         for i in range(sensor_num):
             df["Sensor"+str(i+1)] = df["Sensor"+str(i+1)].rolling(window=self.window_size).mean()
-            self.progress_changed.emit((i/(sensor_num-1))*((index+1)/total_count)*(1-self.marker_sensor_progress_ratio)*100 + self.marker_sensor_progress_ratio*100)
+            
+            self.update_progress((i/(sensor_num-1))*((index+1)/total_count)*(1-self.marker_sensor_progress_ratio)*100 + self.marker_sensor_progress_ratio*100)
+            
+            # flag 변경 시 작업 중도 정지
+            if not self._is_running:
+                return None, Exception("The operation was canceled by the user.")
 
         _, refined_df = split_dataframe(df, self.window_size-1)
         refined_df["Time (s)"] = refined_df["Time (s)"]-refined_df["Time (s)"][0]
-        return refined_df.astype(float)
+        return refined_df.astype(float), Exception()
 
     def run(self):
         # target count 대비 success count 계산을 위한 변수 선언
@@ -132,21 +145,25 @@ class WorkerThread(QThread):
 
             count = 0
             for key, marker_data in marker_data_list.items():
-                refined_marker_data = self.__refine_marker_data(count, len(marker_data_list), pd.DataFrame(marker_data))
-                if refined_marker_data is not None: 
+                refined_marker_data, exception = self.__refine_marker_data(key, count, len(marker_data_list), pd.DataFrame(marker_data))
+                if refined_marker_data is None:
+                    self.finished.emit(False, success_count, target_count, {}, {}, exception)
+                    return
+                else:
                     marker_refined_data_list[key] = refined_marker_data
                     count += 1
-
-            success_count += count
+                    success_count += 1
 
             count = 0
             for key, sensor_data in sensor_data_list.items():
-                refined_sensor_data = self.__refine_sensor_data(count, len(sensor_data_list), pd.DataFrame(sensor_data))
-                if refined_sensor_data is not None:
+                refined_sensor_data, exception = self.__refine_sensor_data(key, count, len(sensor_data_list), pd.DataFrame(sensor_data))
+                if refined_sensor_data is None:
+                    self.finished.emit(False, success_count, target_count, {}, {}, exception)
+                    return
+                else:
                     sensor_refined_data_list[key] = refined_sensor_data
                     count += 1
-
-            success_count += count
+                    success_count += 1
 
             self.finished.emit(True, success_count, target_count, marker_refined_data_list, sensor_refined_data_list, Exception())
                 
@@ -157,8 +174,11 @@ class DataRefiner():
         # JSON 데이터 보관 인스턴스 저장
         self.json_data_manager = json_data_manager
 
+        # 스레드 관리
+        self.refining_thread = None
+        
         # 오래 걸리는 작업 표시를 위한 loading dialog 생성
-        self.progress_dialog = ProgressDialog(self.parent)
+        self.progress_dialog = ProgressDialog("Data refining progress", self.parent)
 
         # coordinate marker 등록
         self.coordinate_marker_1_label = "Marker1"
@@ -166,10 +186,7 @@ class DataRefiner():
         self.coordinate_marker_3_label = "Marker3"
 
         # Sensor data smoothing window size 설정
-        self.window_size = 50
-
-        # 스레드 관리
-        self.refining_thread = None
+        self.window_size = 5
 
     def refine_data(self, target_data_keys):
         # 이전 작업이 진행 중일 경우
@@ -200,11 +217,8 @@ class DataRefiner():
                                             self.window_size,
                                             self.progress_dialog)
         self.refining_thread.finished.connect(self.__on_refining_finished)
-        self.refining_thread.progress_changed.connect(self.__update_progress)
+        self.progress_dialog.set_worker(self.refining_thread) # 백그라운드 스레드 전달
         self.refining_thread.start()
-    
-    def __update_progress(self, value):
-        self.progress_dialog.update_progress(value)
 
     def __on_refining_finished(self, is_succeed, success_count, target_count, marker_refined_data, sensor_refined_data, exception):
         # 작업 종료 window 표시
@@ -220,68 +234,8 @@ class DataRefiner():
             CustomMessageBox.information(self.parent, "Information", f"Data refining has been completed : {success_count} / {target_count}")
 
         self.refining_thread = None
+        self.progress_dialog.set_worker(self.refining_thread) # 백그라운드 스레드 전달
           
-class CustomLineEdit(QLineEdit):
-    def __init__(self, edit_finish_callback, parent=None):
-        super().__init__(parent)
-        # 기본 스타일 시트 설정
-        self.set_default_style()
-        
-        # 수정 완료 시 호출 이벤트 등록
-        self.edit_finish_callback = edit_finish_callback
-        self.editingFinished.connect(self.check_text_input)
-        
-        # 메서드 호출을 통한 수정 시 콜백 호출되는 것을 방지
-        self.is_handling_editing = False
-
-    def set_default_style(self):
-        # 기본 색상
-        self.setStyleSheet(f"""
-                            background-color: {PyQtAddon.get_color("background_color")};
-                            color: {PyQtAddon.get_color("content_text_color")};
-                            font-family: {PyQtAddon.text_font};
-                            border: 1px solid {PyQtAddon.get_color("content_line_color")}
-                            """)
-
-    def set_focus_style(self):
-        # 포커스가 있을 때 색상
-        self.setStyleSheet(f"""
-                            background-color: {PyQtAddon.get_color("background_color")};
-                            color: {PyQtAddon.get_color("content_text_color")};
-                            font-family: {PyQtAddon.text_font};
-                            border: 1px solid {PyQtAddon.get_color("point_color_2")}
-                            """)
-
-    def focusInEvent(self, event):
-        # 포커스를 얻었을 때 스타일 변경
-        self.set_focus_style()
-        super().focusInEvent(event)
-
-    def focusOutEvent(self, event):
-        # 포커스를 잃었을 때 기본 스타일로 변경
-        self.set_default_style()
-        super().focusOutEvent(event)
-        
-    def set_text_in_line_edit(self, text):
-        # 메서드로 text 수정할 때, editingFinished invoke 되지 않도록 하는 메서드
-        self.blockSignals(True)
-        self.setText(text)
-        self.blockSignals(False)
-    
-    def check_text_input(self):
-        # 프로그램적으로 텍스트 설정 중일 때는 호출하지 않음
-        if self.is_handling_editing:
-            return
-        
-        # 플래그 설정
-        self.is_handling_editing = True
-    
-        if self.edit_finish_callback is not None:
-            self.edit_finish_callback(self.text())
-            
-        # 플래그 해제
-        self.is_handling_editing = False
-
 class DataRefiningWidget(QWidget):
     def __init__(self, json_data_manager, json_data_viewer, parent=None):
         super().__init__(parent)
@@ -450,28 +404,28 @@ class DataRefiningWidget(QWidget):
     def __check_axis_marker_1_input(self, text):
         # 입력이 Marker + 숫자 인 지 확인
         if bool(re.match(r"^Marker\d+$", text)):
-            self.data_refiner.axis_marker_1_label = text
-            CustomMessageBox.information(self.parent, "Information", f"The axis marker 1 has been set to {self.data_refiner.axis_marker_1_label}.")
+            self.data_refiner.coordinate_marker_1_label = text
+            CustomMessageBox.information(self.parent, "Information", f"The axis marker 1 has been set to {self.data_refiner.coordinate_marker_1_label}.")
         else:
-            self.axis_marker_1_input_field.setText(str(self.data_refiner.axis_marker_1_label))
+            self.axis_marker_1_input_field.setText(str(self.data_refiner.coordinate_marker_1_label))
             CustomMessageBox.warning(self.parent, "Warning", """Invalid input. Please enter an "Marker + integer (ex. Marker1)".""")
             
     def __check_axis_marker_2_input(self, text):
         # 입력이 Marker + 숫자 인 지 확인
         if bool(re.match(r"^Marker\d+$", text)):
-            self.data_refiner.axis_marker_2_label = text
-            CustomMessageBox.information(self.parent, "Information", f"The axis marker 2 has been set to {self.data_refiner.axis_marker_2_label}.")
+            self.data_refiner.coordinate_marker_2_label = text
+            CustomMessageBox.information(self.parent, "Information", f"The axis marker 2 has been set to {self.data_refiner.coordinate_marker_2_label}.")
         else:
-            self.axis_marker_2_input_field.setText(str(self.data_refiner.axis_marker_2_label))
+            self.axis_marker_2_input_field.setText(str(self.data_refiner.coordinate_marker_2_label))
             CustomMessageBox.warning(self.parent, "Warning", """Invalid input. Please enter an "Marker + integer (ex. Marker2)".""")
             
     def __check_axis_marker_3_input(self, text):
         # 입력이 Marker + 숫자 인 지 확인
         if bool(re.match(r"^Marker\d+$", text)):
-            self.data_refiner.axis_marker_3_label = text
-            CustomMessageBox.information(self.parent, "Information", f"The axis marker 3 has been set to {self.data_refiner.axis_marker_3_label}.")
+            self.data_refiner.coordinate_marker_3_label = text
+            CustomMessageBox.information(self.parent, "Information", f"The axis marker 3 has been set to {self.data_refiner.coordinate_marker_3_label}.")
         else:
-            self.axis_marker_3_input_field.setText(str(self.data_refiner.axis_marker_3_label))
+            self.axis_marker_3_input_field.setText(str(self.data_refiner.coordinate_marker_3_label))
             CustomMessageBox.warning(self.parent, "Warning", """Invalid input. Please enter an "Marker + integer (ex. Marker3)".""")
               
     def __check_window_size_input(self, text):

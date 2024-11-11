@@ -1,13 +1,13 @@
 from .common import *
 import copy
 
-class SaveThread(QThread):
+class SaveThread(BackgroundThreadWorker):
     # 작업 완료 시그널
     # bool: data load 성공 여부
     # str: target file path
     # Exception: 오류
     save_finished = pyqtSignal(bool, Exception)
-
+    
     def __init__(self, data_hist, parent=None):
         super().__init__(parent)
 
@@ -15,6 +15,8 @@ class SaveThread(QThread):
 
     def run(self):
         # data_hist에서, unsaved_data_flag (추가 대기) 및 hide_data_flag (삭제 대기)가 있는 경우에만 저장
+        count = 0
+        total_count = len(self.data_hist)
         for data in self.data_hist.values():
             # data[0]: file_data
             # data[1]: unsaved_data_flag
@@ -45,20 +47,23 @@ class SaveThread(QThread):
             if do_save:
                 try:
                     save_dict_to_json(data[3], data[0])
+                    count += 1
+                    self.update_progress(count/total_count*100)
+                    
                 except Exception as e:
                     self.save_finished.emit(False, e)
                     return
 
         self.save_finished.emit(True, Exception())
                         
-class LoadThread(QThread):
+class LoadThread(BackgroundThreadWorker):
     # 작업 완료 시그널
     # bool: data load 성공 여부
     # str: target file path
     # str: target file path
     # dict: load된 데이터 (dictionary of pd.DataFrame)
     # Exception: 오류
-    load_finished = pyqtSignal(bool, str, str, dict, Exception)  
+    load_finished = pyqtSignal(bool, str, str, dict, Exception)
 
     def __init__(self, directory, target_file_name, parent=None):
         """백그라운드 스레드에서 JSON 데이터 로드하기 위한 클래스
@@ -82,13 +87,19 @@ class LoadThread(QThread):
             # 파일 경로 구성
             file_path = os.path.join(self.directory, self.target_file_name)  
             
+            self.update_progress(5)
+            
             try:
                 # JSON 파일에서 딕셔너리 불러오기
                 with open(file_path, 'r') as json_file:
                     data = json.load(json_file)
                     data_dict = {}
+                    
+                    self.update_progress(10)
 
                     # 딕셔너리 요소 순회하면서 dataframe 복원
+                    count = 0
+                    total_count = len(data)
                     for key, value in data.items():
                         # 데이터프레임으로 변환
                         df = pd.DataFrame(value)
@@ -96,6 +107,9 @@ class LoadThread(QThread):
                         # 인덱스를 int로 변환
                         df.index = df.index.astype(int)
                         data_dict[key] = df
+                        
+                        count += 1
+                        self.update_progress(count/total_count*90 + 10)
 
                     self.load_finished.emit(True, file_path, self.target_file_name, data_dict, Exception())
 
@@ -117,9 +131,13 @@ class JSONDataManager():
         # 부모 객체 저장
         self.parent = parent
         
-        # 오래 걸리는 작업을 처리하기 위한 loading dialog 생성
-        self.loading_dialog = CustomLoadingDialog(self.parent)
-        self.saving_dialog = CustomLoadingDialog(self.parent)
+        # 스레드 관리
+        self.data_load_thread = None
+        self.data_save_thread = None
+        
+        # 오래 걸리는 작업을 처리하기 위한 dialog 생성
+        self.loading_dialog = ProgressDialog("Data loading progress", self.parent)
+        self.saving_dialog = ProgressDialog("Data saving progress", self.parent)
         
         # json 데이터 관련
         self.file_name = None            # 현재 작업 대상 파일명
@@ -135,10 +153,6 @@ class JSONDataManager():
             # index 2 > hide_data_flag
             # index 3 > file path
         self.data_hist = {}
-        
-        # 스레드 관리
-        self.data_load_thread = None
-        self.data_save_thread = None
         
         # 이벤트 관리
         self.on_target_file_changed = CustomEventHandler() 
@@ -215,11 +229,13 @@ class JSONDataManager():
         # Load 요청한 JSON 파일이 인스턴스 데이터에 없을 경우
         else:
             # 작업 시작 window 표시
-            self.loading_dialog.on_task_started()
+            # self.loading_dialog.on_task_started()
+            self.loading_dialog.start_progress()
             
             # 백그라운드 스레드에서 data load 작업 수행
             self.data_load_thread = LoadThread(file_directory, file_name, self.parent)
             self.data_load_thread.load_finished.connect(self.__on_json_data_load_finished)
+            self.loading_dialog.set_worker(self.data_load_thread) # 백그라운드 스레드 설정
             self.data_load_thread.start()
             
     def __on_json_data_load_finished(self, is_succeed, file_path, file_name, data_dict, exception):
@@ -260,8 +276,9 @@ class JSONDataManager():
             self.__set_target_file_data(None, None, None)
             CustomMessageBox.critical(self.parent, "Error", f"Error to load {file_name} : {exception}")
             
-        self.loading_dialog.on_task_finished()
+        self.loading_dialog.stop_progress()
         self.data_load_thread = None
+        self.loading_dialog.set_worker(self.data_load_thread) # 백그라운드 스레드 설정
         
     def rename_json_data(self, old_file_name, new_file_name):
         # 데이터 이전   
@@ -357,19 +374,23 @@ class JSONDataManager():
             return
         
         # 작업 시작 window 표시
-        self.saving_dialog.on_task_started()
+        self.saving_dialog.start_progress()
         
         # 백그라운드 스레드에서 data load 작업 수행
         self.data_save_thread = SaveThread(self.data_hist, self.parent)
         self.data_save_thread.save_finished.connect(self.__on_save_finished)
+        self.saving_dialog.set_worker(self.data_save_thread) # 백그라운드 스레드 연결
         self.data_save_thread.start()
 
     def __on_save_finished(self, is_succeed, exception):
         self.__on_target_file_data_changed()
-        self.saving_dialog.on_task_finished()
+        self.saving_dialog.stop_progress()
 
         if is_succeed:
             CustomMessageBox.information(self.parent, "Information", "Data has been saved successfully.")
         else:
             CustomMessageBox.critical(self.parent, "Error", "Failed to save data : " + str(exception))
+            
+        self.data_save_thread = None
+        self.saving_dialog.set_worker(self.data_save_thread) # 백그라운드 스레드 연결
 

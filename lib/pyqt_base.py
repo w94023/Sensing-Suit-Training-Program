@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (QApplication, QLabel, QCalendarWidget, QFrame, QTre
                              QScrollArea, QFileDialog, QTableWidgetItem, QListWidget, QListWidgetItem,
                              QHeaderView, QMessageBox, QStyledItemDelegate, QStyleOptionViewItem,
                              QGridLayout, QDialog, QLineEdit, QListView, QMenu, QDialogButtonBox, QLayout,
-                             QTabWidget)
+                             QTabWidget, QSlider)
                       
 #############################################
 #             디렉토리 설정                 #
@@ -736,7 +736,7 @@ class CustomProgressBar(QWidget):
         # self.progress_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.progress_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
         self.progress_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.progress_label.setFixedSize(30, 20)
+        self.progress_label.setFixedSize(40, 20)
         self.progress_label.setStyleSheet(f"""
                                           QLabel {{
                                               background-color:{PyQtAddon.get_color("background_color")};
@@ -756,7 +756,69 @@ class CustomProgressBar(QWidget):
         int_value = int(value)
         self.progress_bar.setValue(int_value)
         self.progress_label.setText(f"{int_value}%")
+        self.progress_label.repaint()  # 강제로 다시 그리기
 
+class CustomLineEdit(QLineEdit):
+    def __init__(self, edit_finish_callback, parent=None):
+        super().__init__(parent)
+        # 기본 스타일 시트 설정
+        self.set_default_style()
+        
+        # 수정 완료 시 호출 이벤트 등록
+        self.edit_finish_callback = edit_finish_callback
+        self.editingFinished.connect(self.check_text_input)
+        
+        # 메서드 호출을 통한 수정 시 콜백 호출되는 것을 방지
+        self.is_handling_editing = False
+
+    def set_default_style(self):
+        # 기본 색상
+        self.setStyleSheet(f"""
+                            background-color: {PyQtAddon.get_color("background_color")};
+                            color: {PyQtAddon.get_color("content_text_color")};
+                            font-family: {PyQtAddon.text_font};
+                            border: 1px solid {PyQtAddon.get_color("content_line_color")}
+                            """)
+
+    def set_focus_style(self):
+        # 포커스가 있을 때 색상
+        self.setStyleSheet(f"""
+                            background-color: {PyQtAddon.get_color("background_color")};
+                            color: {PyQtAddon.get_color("content_text_color")};
+                            font-family: {PyQtAddon.text_font};
+                            border: 1px solid {PyQtAddon.get_color("point_color_2")}
+                            """)
+
+    def focusInEvent(self, event):
+        # 포커스를 얻었을 때 스타일 변경
+        self.set_focus_style()
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event):
+        # 포커스를 잃었을 때 기본 스타일로 변경
+        self.set_default_style()
+        super().focusOutEvent(event)
+        
+    def set_text_in_line_edit(self, text):
+        # 메서드로 text 수정할 때, editingFinished invoke 되지 않도록 하는 메서드
+        self.blockSignals(True)
+        self.setText(text)
+        self.blockSignals(False)
+    
+    def check_text_input(self):
+        # 프로그램적으로 텍스트 설정 중일 때는 호출하지 않음
+        if self.is_handling_editing:
+            return
+        
+        # 플래그 설정
+        self.is_handling_editing = True
+    
+        if self.edit_finish_callback is not None:
+            self.edit_finish_callback(self.text())
+            
+        # 플래그 해제
+        self.is_handling_editing = False
+        
 """CustomLogger 신규 정의"""
 class CustomLogWorker(QThread):
     update_label = pyqtSignal(str)
@@ -1378,66 +1440,6 @@ class CustomInputDialog(QInputDialog):
         else:
             return "", False
 
-class ProgressDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # 레이아웃 생성
-        self.setWindowTitle("Please Wait")
-        # self.setFixedSize(300, 100)
-        self.setModal(True) # 부모 창과 상호 작용 차단
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowCloseButtonHint)  # 닫기 버튼 비활성화
-
-        # 레이아웃 설정
-        layout = QVBoxLayout()
-
-        # Progress bar 생성
-        # self.progress_bar = QProgressBar()
-        self.progress_bar = CustomProgressBar(0, parent=self)
-        # self.progress_bar.setAlignment(Qt.AlignCenter)
-        # self.progress_bar.setRange(0, 100)
-
-        # "작업 중" 애니메이션 GIF 추가
-        self.loading_label = QLabel(self)
-        self.movie = QMovie(PyQtAddon.convert_url(os.path.join(icons_directory, "loading_icon.gif")))  # 로딩 애니메이션 GIF 파일 경로
-        self.movie.setScaledSize(QSize(40, 40)) # QMovie의 크기를 특정 픽셀 크기로 설정
-        self.loading_label.setMovie(self.movie)
-        self.movie.start()
-
-        # 정보 라벨 추가
-        self.info_label = QLabel("The task is in progress. Please wait...", self)
-        self.info_label.setAlignment(Qt.AlignCenter)
-        self.info_label.setStyleSheet(f"""QLabel {{
-                                         background-color: {PyQtAddon.get_color("background_color")};
-                                         color: {PyQtAddon.get_color("title_text_color")};
-                                         }}""")
-        
-        # 레이아웃에 위젯 추가
-        layout.addWidget(self.loading_label, alignment=Qt.AlignCenter)
-        layout.addWidget(self.progress_bar)
-        layout.addWidget(self.info_label)
-
-        self.setLayout(layout)
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {PyQtAddon.get_color("background_color")};
-                border: none;
-            }}
-        """)
-
-    def start_progress(self):
-        """백그라운드 스레드 작업 시작"""
-        self.progress_bar.set_value(0)  # ProgressBar 초기화
-        self.show()
-
-    def update_progress(self, value):
-        """진행 상황을 업데이트"""
-        self.progress_bar.set_value(int(value))
-
-    def stop_progress(self):
-        self.progress_bar.set_value(100)
-        self.accept()
-
 # QDialog
 class CustomLoadingDialog(QDialog):
     def __init__(self, parent=None):
@@ -2013,100 +2015,6 @@ class CustomGridKeywordSingleClickWidget(CustomGridKeywordWidget):
         if self.last_clicked_label:
             self.last_clicked_label.setStyleSheet(self.last_clicked_label.default_style)
             self.last_clicked_label = None
-                      
-class CustomComboBoxDialog(QDialog):
-    def __init__(self, default_options=None, parent=None):
-        """Data name, type, state 선택할 수 있는 combo box 세 개를 가진 QDialog
-
-        Args:
-            default_options (str list): 각 콤보 박스의 기본값. Defaults to None.
-        """
-        
-        # 각 콤보 박스 옵션 설정
-        data_name_list = ["AA", "FE", "ML", "CB1", "CB2", "CB3", "VALID", "TEST"]
-        data_type_list = ["marker", "sensor"]
-        data_state_list = ["raw", "refined"]
-        
-        # default_index 유효성 검사
-        if default_options is None:
-            default_index = [0, 0, 0]
-        else:
-            if len(default_options) != 3:
-                default_index = [0, 0, 0]
-                
-            else:
-                default_index = [
-                    data_name_list. index(default_options[0]) if default_options[0] in data_name_list  else 0,
-                    data_type_list. index(default_options[1]) if default_options[1] in data_type_list  else 0,
-                    data_state_list.index(default_options[2]) if default_options[2] in data_state_list else 0
-                ]
-            
-        super().__init__(parent)
-        self.setWindowTitle("Select Options")
-
-        # 레이아웃 설정
-        layout = QVBoxLayout(self)
-
-        # Data name dropdown
-        self.data_name_combo = CustomComboBox(self)
-        self.data_name_combo.addItems(data_name_list)
-        layout.addWidget(QLabel("Select data name:"))
-        layout.addWidget(self.data_name_combo)
-        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
-        self.data_name_combo.setCurrentIndex(default_index[0])
-
-        # Data type dropdown
-        self.data_type_combo = CustomComboBox(self)
-        self.data_type_combo.addItems(data_type_list)
-        layout.addWidget(QLabel("Select data type:"))
-        layout.addWidget(self.data_type_combo)
-        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
-        self.data_type_combo.setCurrentIndex(default_index[1])
-
-        # Data state dropdown
-        self.data_state_combo = CustomComboBox(self)
-        self.data_state_combo.addItems(data_state_list)
-        layout.addWidget(QLabel("Select data state:"))
-        layout.addWidget(self.data_state_combo)
-        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
-        self.data_state_combo.setCurrentIndex(default_index[2])
-
-        # OK, Cancel 버튼
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-        
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {PyQtAddon.get_color("background_color")};
-                border: none;
-            }}
-            QLabel {{
-                color: {PyQtAddon.get_color("title_text_color")};
-                font-family: {PyQtAddon.text_font};
-                border: none;
-            }}
-            QPushButton {{
-                background-color: {PyQtAddon.get_color("point_color_1")};
-                color: {PyQtAddon.get_color("title_text_color")};
-                padding: 4px 8px;
-                border-radius: 0px;
-                border: none;
-            }}
-            QPushButton:hover {{
-                background-color: {PyQtAddon.get_color("point_color_2")};
-                border: none;
-            }}
-        """)
-
-    def get_selections(self):
-        """선택된 항목을 반환
-
-        Returns:
-            str list: [data name, data type, data state]
-        """
-        # 선택된 항목을 반환
-        return [self.data_name_combo.currentText(), self.data_type_combo.currentText(), self.data_state_combo.currentText()]
+                    
     
     

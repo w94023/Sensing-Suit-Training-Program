@@ -47,6 +47,7 @@ class AppManager():
         self.ui_window.add_docking_widget("Labels",          Qt.RightDockWidgetArea)
         self.ui_window.add_docking_widget("Data refining",   Qt.RightDockWidgetArea)
         self.ui_window.add_docking_widget("Optimization",    Qt.RightDockWidgetArea)
+        self.ui_window.add_docking_widget("Data split",      Qt.RightDockWidgetArea)
         self.ui_window.add_docking_widget("Log",             Qt.BottomDockWidgetArea)
         
         # File tree viewer + file browser 생성 후 layout에 배치
@@ -73,21 +74,27 @@ class AppManager():
 
         # JSON Data plot widget 생성 및 배치
         json_data_plot_widget = JSONDataPlotter(json_data_manager, json_data_viewer, parent=self.ui_window)
+        json_data_plot_canvas = json_data_plot_widget.get_figure_widget()
         self.ui_window.docking_widgets["Labels"].setWidget(json_data_plot_widget)
 
         optimizer_widget = OptimalSensorPlacementWidget()
         self.ui_window.docking_widgets["Optimization"].setWidget(optimizer_widget)
         
-        self.ui_window.central_layout.addWidget(json_data_plot_widget.get_figure_widget())
+        data_split_widget = DataSplittingWidget(json_data_manager, json_data_viewer, json_data_plot_widget, parent=self.ui_window)
+        self.ui_window.docking_widgets["Data split"].setWidget(data_split_widget)
+        
+        self.ui_window.central_layout.addWidget(json_data_plot_canvas)
 
         self.ui_window.add_layout_configuration("Data load", [
             self.ui_window.docking_widgets["Directory"],
             self.ui_window.docking_widgets["Data"],
             self.ui_window.docking_widgets["Data viewer"],
             self.ui_window.docking_widgets["Labels"],
-            self.ui_window.docking_widgets["Data refining"]
+            self.ui_window.docking_widgets["Data refining"],
+            self.ui_window.docking_widgets["Data split"],
         ], [
             Qt.LeftDockWidgetArea,
+            Qt.RightDockWidgetArea,
             Qt.RightDockWidgetArea,
             Qt.RightDockWidgetArea,
             Qt.RightDockWidgetArea,
@@ -99,6 +106,8 @@ class AppManager():
             self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Labels"], self.ui_window.docking_widgets["Data refining"], Qt.Horizontal),
             # Data widget과 Data viewer widget 세로로 나란히 배치
             self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data"], self.ui_window.docking_widgets["Data viewer"], Qt.Vertical),
+            # Data refining widget과 Data split widget 세로로 나란히 배치
+            self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data refining"], self.ui_window.docking_widgets["Data split"], Qt.Vertical),
             
             # PyQtAddon.clear_layout(self.ui_window.central_layout),
             

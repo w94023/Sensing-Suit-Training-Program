@@ -1,6 +1,131 @@
 from .common import *
 from .tree_view import *
+
+class CustomComboBoxDialog(QDialog):
+    def __init__(self, default_options=None, parent=None):
+        """Data name, type, state 선택할 수 있는 combo box 세 개를 가진 QDialog
+
+        Args:
+            default_options (str list): 각 콤보 박스의 기본값. Defaults to None.
+        """
+        
+        # 각 콤보 박스 옵션 설정
+        data_name_list = ["AA", "FE", "ML", "CB1", "CB2", "CB3", "VALID", "TEST", "..."]
+        data_type_list = ["marker", "sensor"]
+        data_state_list = ["raw", "refined"]
+        
+        # default_index 유효성 검사
+        if default_options is None:
+            default_index = [0, 0, 0]
+        else:
+            if len(default_options) != 3:
+                default_index = [0, 0, 0]
                 
+            else:
+                default_index = [
+                    data_name_list. index(default_options[0]) if default_options[0] in data_name_list  else 0,
+                    data_type_list. index(default_options[1]) if default_options[1] in data_type_list  else 0,
+                    data_state_list.index(default_options[2]) if default_options[2] in data_state_list else 0
+                ]
+            
+        self.parent = parent
+        super().__init__(self.parent)
+        self.setWindowTitle("Select Options")
+
+        # 레이아웃 설정
+        layout = QVBoxLayout(self)
+
+        # Data name dropdown
+        self.data_name_combo = CustomComboBox(self)
+        self.data_name_combo.addItems(data_name_list)
+        layout.addWidget(QLabel("Select data name:"))
+        layout.addWidget(self.data_name_combo)
+        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
+        self.data_name_combo.setCurrentIndex(default_index[0])
+        
+        # data name dropbox의 option이 ...일 경우, 이벤트 발생시킬 수 있도록 콜백 연결
+        self.data_name_combo.currentIndexChanged[str].connect(self.__on_data_name_changed)
+
+        # Data type dropdown
+        self.data_type_combo = CustomComboBox(self)
+        self.data_type_combo.addItems(data_type_list)
+        layout.addWidget(QLabel("Select data type:"))
+        layout.addWidget(self.data_type_combo)
+        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
+        self.data_type_combo.setCurrentIndex(default_index[1])
+
+        # Data state dropdown
+        self.data_state_combo = CustomComboBox(self)
+        self.data_state_combo.addItems(data_state_list)
+        layout.addWidget(QLabel("Select data state:"))
+        layout.addWidget(self.data_state_combo)
+        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
+        self.data_state_combo.setCurrentIndex(default_index[2])
+
+        # OK, Cancel 버튼
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+        
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {PyQtAddon.get_color("background_color")};
+                border: none;
+            }}
+            QLabel {{
+                color: {PyQtAddon.get_color("title_text_color")};
+                font-family: {PyQtAddon.text_font};
+                border: none;
+            }}
+            QPushButton {{
+                background-color: {PyQtAddon.get_color("point_color_1")};
+                color: {PyQtAddon.get_color("title_text_color")};
+                padding: 4px 8px;
+                border-radius: 0px;
+                border: none;
+            }}
+            QPushButton:hover {{
+                background-color: {PyQtAddon.get_color("point_color_2")};
+                border: none;
+            }}
+        """)
+        
+    def __get_custom_file_name(self):
+        file_name = CustomInputDialog.getText(self.parent, "Data import", "Please enter the file name.", "")
+        
+        if file_name == "":
+            CustomMessageBox.warning(self.parent, "Data import", "Please enter a valid data name.")
+            self.__get_custom_file_name()
+            
+        else:
+            return file_name
+
+    def __on_data_name_changed(self, text):
+        # 유저가 입력한 데이터가 ...일 경우, 직접 file name 수정할 수 있도록 Dialog 생성
+        if text == "...":
+            file_name = self.__get_custom_file_name()
+        
+            # ... 삭제 후, 유저가 입력한 file name으로 변경
+            target_index = self.data_name_combo.findText("...")
+            self.data_name_combo.setItemText(target_index, file_name[0])
+            
+            # ... 항목 추가
+            self.data_name_combo.addItem("...")
+            
+            # 
+            # self.data_name_combo.removeItem(target_index)
+            # self.data_name_combo.addItem(file_name[0])
+        
+    def get_selections(self):
+        """선택된 항목을 반환
+
+        Returns:
+            str list: [data name, data type, data state]
+        """
+        # 선택된 항목을 반환
+        return [self.data_name_combo.currentText(), self.data_type_combo.currentText(), self.data_state_combo.currentText()]
+    
 class CustomDataTreeView(CustomDataTreeView):
     def __init__(self, json_data_manager, csv_data_tree_view_header, model=None, parent=None):
         """CustomDataTreeView에서 drop event, 마우스 우클릭 event 추가한 위젯
@@ -103,7 +228,7 @@ class CustomDataTreeView(CustomDataTreeView):
         directory_path = QFileDialog.getExistingDirectory(self, "Select Directory", "", QFileDialog.ShowDirsOnly)
         
         # JSON data manager로부터 현재 타겟의 데이터 불러오기
-        data, _, _ = self.json_data_manager.get_json_data()
+        data = self.json_data_manager.file_data
         
         # 선택된 item에 대해 csv 파일 export 시작
         for item in self.selected_items:
@@ -114,8 +239,7 @@ class CustomDataTreeView(CustomDataTreeView):
                 
                 # data value 저장
                 save_csv_file(os.path.join(directory_path, item_key+".csv"), data[item_key])
-
-    
+   
     def __cut_string_after_substring(self, main_string, sub_string):
         """main string에서 sub string 잘라내고 반환하는 메서드
 
@@ -370,6 +494,9 @@ class JSONDataViewer(QWidget):
         # 이벤트 초기화
         self.on_item_clicked(None)
         self.on_item_double_clicked(None)
+        
+        # Target file 표시
+        self.selected_file_label.setText(file_name)
 
         # Data의 헤더를 알파벳 순으로 정렬
         sorted_key_list, _ = get_sorted_indices(file_data.keys())
@@ -387,4 +514,7 @@ class JSONDataViewer(QWidget):
             sorted_icon_flag.append(unsaved_data_flag[sorted_key_list[i]])
             
         self.csv_data_tree_view.add_items(sorted_header_list, sorted_selected_flag, sorted_icon_flag)
+        
+        # 수평 슬라이더를 가장 좌측으로 이동
+        self.csv_data_tree_view.horizontalScrollBar().setValue(0)
     

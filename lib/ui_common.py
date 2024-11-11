@@ -46,6 +46,7 @@ class UiStyle:
     colors["point_color_3"]               = (252, 88,  126, 1  ) # 분홍색
     colors["point_color_4"]               = (234, 23,  12,  1  ) # 붉은색
     colors["point_color_5"]               = (31,  91,  92,  0.5) # 투명한 청록색
+    colors["point_color_6"]               = (252, 88,  126, 0.5) # 투명한 분홍색
     colors["axis_color_1"]                = (255, 255, 255, 1  ) # 하얀색
     colors["axis_color_2"]                = (76,  76,  76,  1  ) # 연한 회색
     colors["axis_color_3"]                = (150, 150, 150, 1  ) # 짙은 회색

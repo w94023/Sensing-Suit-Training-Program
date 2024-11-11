@@ -2,6 +2,7 @@ from ...pyqt_base import *
 from ...ui_common import *
 from ..pyqt import *
 from ..csv import *
+from ..thread import*
 
 root_directory =  os.path.dirname( # 상위 디렉토리 (root)
                      os.path.dirname( # 상위 디렉토리 (lib)

@@ -36,10 +36,12 @@ class JSONDataPlotter(QWidget):
         self.target_file_type = None
         self.target_file_data_ylim = []
         
+        self.ax = None
+        
     def get_figure_widget(self):
         """Legend widget, canvas가 배치된 widget 반환"""
         return self.figure_widget
-        
+ 
     def __clear(self):
         """TreeView, Canvas, 인스턴스 데이터 모두 초기화"""
         self.target_file_data = None
@@ -51,6 +53,7 @@ class JSONDataPlotter(QWidget):
         
     def __clear_canvas(self):
         """Canvas만 초기화"""
+        self.ax = None
         self.legend_widget.clear_layout()
         self.canvas.clear()
         self.canvas.draw()
@@ -126,17 +129,17 @@ class JSONDataPlotter(QWidget):
         self.canvas.clear()
         
         # Axis 생성
-        ax = self.canvas.get_ax(0, 0)
+        self.ax = self.canvas.get_ax(0, 0)
         
         # x, y label 및 title 추가
         if self.target_file_type == "marker":
-            ax.set_title("Marker data plot", color=UiStyle.get_color("content_text_color", "fraction"))
-            ax.set_xlabel("Time (s)",        color=UiStyle.get_color("content_text_color", "fraction"))
-            ax.set_ylabel("Position (mm)",   color=UiStyle.get_color("content_text_color", "fraction"))
+            self.ax.set_title("Marker data plot", color=UiStyle.get_color("content_text_color", "fraction"))
+            self.ax.set_xlabel("Time (s)",        color=UiStyle.get_color("content_text_color", "fraction"))
+            self.ax.set_ylabel("Position (mm)",   color=UiStyle.get_color("content_text_color", "fraction"))
         elif self.target_file_type == "sensor":
-            ax.set_title("Sensor data plot", color=UiStyle.get_color("content_text_color", "fraction"))
-            ax.set_xlabel("frame",           color=UiStyle.get_color("content_text_color", "fraction"))
-            ax.set_ylabel("Digit",           color=UiStyle.get_color("content_text_color", "fraction"))
+            self.ax.set_title("Sensor data plot", color=UiStyle.get_color("content_text_color", "fraction"))
+            self.ax.set_xlabel("frame",           color=UiStyle.get_color("content_text_color", "fraction"))
+            self.ax.set_ylabel("Digit",           color=UiStyle.get_color("content_text_color", "fraction"))
         
         # 선택된 데이터 plot
         for i in range(len(item_names)):
@@ -155,12 +158,12 @@ class JSONDataPlotter(QWidget):
                 if self.target_file_data_ylim[1] < max:
                     self.target_file_data_ylim[1] = max
 
-            ax.plot(self.target_file_data.iloc[:, 0], self.target_file_data[label], color=UiStyle.get_plot_color(i), label=label)
-            ax.set_ylim(add_offset_to_limit(self.target_file_data_ylim, 0.1))
+            self.ax.plot(self.target_file_data.iloc[:, 0], self.target_file_data[label], color=UiStyle.get_plot_color(i), label=label)
+            self.ax.set_ylim(add_offset_to_limit(self.target_file_data_ylim, 0.1))
             self.canvas.draw()
             
         # plot의 legend 핸들과 레이블을 가져오기
-        handles, labels = ax.get_legend_handles_labels()
+        handles, labels = self.ax.get_legend_handles_labels()
     
         # Legend 생성
         self.legend_widget.set_legend(handles, labels)

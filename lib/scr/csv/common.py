@@ -24,7 +24,6 @@ def save_csv_file(file_path, data, parent=None):
     if file_path:
         # DataFrame을 CSV로 저장
         data.to_csv(file_path, index=False)
-        print(f"Data exported to {file_path}")
     else:
         CustomMessageBox.critical(parent, "CSV data export error", "Invalid save path.")
         
