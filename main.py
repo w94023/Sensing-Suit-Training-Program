@@ -8,18 +8,21 @@ from lib.scr.optimization import *
 class AppManager():
     def __init__(self, target_directory):
         # 화면 설정
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # DPI 스케일링 활성화
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # 고해상도 DPI에 맞게 이미지도 스케일링
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
         # Application 생성
         app = QApplication(sys.argv)
+        app.setStyle("Fusion")
         
         # Initial 디렉토리 저장
         self.target_directory = target_directory
         
         # Main window 생성 및 최대화
-        self.ui_window = CustomMainWindow("Sensor demo program")
+        self.ui_window = CustomMainWindow("Sensor demo program", app)
         self.ui_window.showMaximized()
+
+        # self.ui_window.show()
         
         # 백그라운드 이벤트 수행을 위한 flag 초기화
         self.step_count = 0
@@ -48,7 +51,19 @@ class AppManager():
         self.ui_window.add_docking_widget("Data refining",   Qt.RightDockWidgetArea)
         self.ui_window.add_docking_widget("Optimization",    Qt.RightDockWidgetArea)
         self.ui_window.add_docking_widget("Data split",      Qt.RightDockWidgetArea)
+        self.ui_window.add_docking_widget("Wireframe",       Qt.RightDockWidgetArea)
         self.ui_window.add_docking_widget("Log",             Qt.BottomDockWidgetArea)
+
+        self.ui_window.docking_widgets["Directory"]    .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Data"]         .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Data viewer"]  .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Labels"]       .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Data refining"].setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Optimization"] .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Data split"]   .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Wireframe"]    .setMaximumSize(1960, 1080)
+        self.ui_window.docking_widgets["Log"]          .setMaximumSize(1960, 1080)
+
         
         # File tree viewer + file browser 생성 후 layout에 배치
         file_viewer = CustomFileSystemWidget(self.target_directory)
@@ -82,6 +97,11 @@ class AppManager():
         
         data_split_widget = DataSplittingWidget(json_data_manager, json_data_viewer, json_data_plot_widget, parent=self.ui_window)
         self.ui_window.docking_widgets["Data split"].setWidget(data_split_widget)
+
+        # wireframe strain 계산 widget
+        wireframe_widget = WireframeStrainCalculationWidget(json_data_manager, parent=self.ui_window)
+        self.ui_window.docking_widgets["Wireframe"].setWidget(wireframe_widget)
+
         
         self.ui_window.central_layout.addWidget(json_data_plot_canvas)
 
@@ -92,8 +112,10 @@ class AppManager():
             self.ui_window.docking_widgets["Labels"],
             self.ui_window.docking_widgets["Data refining"],
             self.ui_window.docking_widgets["Data split"],
+            self.ui_window.docking_widgets["Wireframe"],
         ], [
             Qt.LeftDockWidgetArea,
+            Qt.RightDockWidgetArea,
             Qt.RightDockWidgetArea,
             Qt.RightDockWidgetArea,
             Qt.RightDockWidgetArea,
@@ -106,31 +128,31 @@ class AppManager():
             self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Labels"], self.ui_window.docking_widgets["Data refining"], Qt.Horizontal),
             # Data widget과 Data viewer widget 세로로 나란히 배치
             self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data"], self.ui_window.docking_widgets["Data viewer"], Qt.Vertical),
-            # Data refining widget과 Data split widget 세로로 나란히 배치
+            # Data refining widget, Data split widget, Wireframe calculation widget 세로로 나란히 배치
             self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data refining"], self.ui_window.docking_widgets["Data split"], Qt.Vertical),
+            self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data split"],    self.ui_window.docking_widgets["Wireframe"],  Qt.Vertical),
             
             # PyQtAddon.clear_layout(self.ui_window.central_layout),
-            
         })
 
-        self.ui_window.add_layout_configuration("Optimization", [
-            self.ui_window.docking_widgets["Data"],
-            self.ui_window.docking_widgets["Data viewer"],
-            self.ui_window.docking_widgets["Optimization"]
-        ], [
-            Qt.LeftDockWidgetArea,
-            Qt.LeftDockWidgetArea,
-            Qt.RightDockWidgetArea,
-        ], lambda: {
-            # Data widget과 Data viewer widget 세로로 나란히 배치
-            self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data"], self.ui_window.docking_widgets["Data viewer"], Qt.Vertical),
-            # 크기를 1:1 비율로 설정
-            self.ui_window.resizeDocks([self.ui_window.docking_widgets["Data"], self.ui_window.docking_widgets["Data viewer"]], [1, 1], Qt.Vertical)
+        # self.ui_window.add_layout_configuration("Optimization", [
+        #     self.ui_window.docking_widgets["Data"],
+        #     self.ui_window.docking_widgets["Data viewer"],
+        #     self.ui_window.docking_widgets["Optimization"]
+        # ], [
+        #     Qt.LeftDockWidgetArea,
+        #     Qt.LeftDockWidgetArea,
+        #     Qt.RightDockWidgetArea,
+        # ], lambda: {
+        #     # Data widget과 Data viewer widget 세로로 나란히 배치
+        #     self.ui_window.splitDockWidget(self.ui_window.docking_widgets["Data"], self.ui_window.docking_widgets["Data viewer"], Qt.Vertical),
+        #     # 크기를 1:1 비율로 설정
+        #     self.ui_window.resizeDocks([self.ui_window.docking_widgets["Data"], self.ui_window.docking_widgets["Data viewer"]], [1, 1], Qt.Vertical)
 
 
-            # PyQtAddon.clear_layout(self.ui_window.central_layout),
-            # self.ui_window.central_layout.addWidget(json_data_show_widget)
-        })
+        #     # PyQtAddon.clear_layout(self.ui_window.central_layout),
+        #     # self.ui_window.central_layout.addWidget(json_data_show_widget)
+        # })
 
         self.ui_window.activate_layout("Data load")
         

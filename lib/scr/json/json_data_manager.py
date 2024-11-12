@@ -347,21 +347,22 @@ class JSONDataManager():
 
             self.__on_target_file_data_changed()
     
-    def remove_data_to_target_json_file(self, key):
+    def remove_data_from_target_json_file(self, keys):
         # 주어진 key를 가진 데이터가 self.file_data 내에 있을 경우
-        if key in self.file_data:
-            # 해당 파일을 숨김 처리
-            self.file_hide_data_flag[key] = True
+        for key in keys:
+            if key in self.file_data.keys():
+                # 해당 파일을 숨김 처리
+                self.file_hide_data_flag[key] = True
 
-            # self.data_hist 갱신
-            self.data_hist[self.file_name] = copy.deepcopy([
-                copy.deepcopy(self.file_data),
-                copy.deepcopy(self.file_unsaved_data_flag),
-                copy.deepcopy(self.file_hide_data_flag),
-                self.file_path
-            ])
+        # self.data_hist 갱신
+        self.data_hist[self.file_name] = copy.deepcopy([
+            copy.deepcopy(self.file_data),
+            copy.deepcopy(self.file_unsaved_data_flag),
+            copy.deepcopy(self.file_hide_data_flag),
+            self.file_path
+        ])
 
-            self.__on_target_file_data_changed()
+        self.__on_target_file_data_changed()
         
     def clear(self):
         # 인스턴스 데이터 초기화

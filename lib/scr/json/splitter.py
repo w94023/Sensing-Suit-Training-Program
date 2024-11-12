@@ -90,6 +90,11 @@ class DataSplittingWidget(QWidget):
         
         # CSV 파일 저장 경로 선택
         directory_path = QFileDialog.getExistingDirectory(self, "Select Directory", "", QFileDialog.ShowDirsOnly)
+
+        # 유저가 directory를 선택하지 않았을 경우
+        if not directory_path:
+            CustomMessageBox.warning(self.parent, "Data split result", "The operation has been canceled.")
+            return
         
         exported_file_names = ""
         

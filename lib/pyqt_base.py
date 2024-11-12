@@ -217,8 +217,8 @@ class PyQtAddon():
 
     """UI 스타일 정의"""
     # Window 설정
-    main_window_width = 1960
-    main_window_height = 1080
+    main_window_width = 800
+    main_window_height = 600
     # 폰트
     text_font = "Arial"
     # UI 컬러 스타일
@@ -1607,7 +1607,7 @@ class CustomDockWidget(QDockWidget):
             
 # QMainWindow
 class CustomMainWindow(QMainWindow):
-    def __init__(self, title):
+    def __init__(self, title, app):
         super().__init__()
 
         # close 이벤트 등록
@@ -1620,8 +1620,12 @@ class CustomMainWindow(QMainWindow):
         # 아이콘 설정
         self.setWindowIcon(QIcon(PyQtAddon.convert_url(os.path.join(icons_directory, "program_icon.svg"))))
 
+        available_geometry = app.primaryScreen().availableGeometry()
+        self.setGeometry(available_geometry)
+
         # 메인 윈도우 설정
-        self.setGeometry(0, 0, PyQtAddon.main_window_width, PyQtAddon.main_window_height)
+        # self.setGeometry(0, 0, PyQtAddon.main_window_width, PyQtAddon.main_window_height)
+        # self.setMaximumSize(800, 600)  # 최대 크기 설정
         self.setWindowTitle(title)
         self.setStyleSheet(f"""
                            QMainWindow {{

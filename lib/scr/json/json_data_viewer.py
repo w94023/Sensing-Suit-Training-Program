@@ -44,7 +44,7 @@ class CustomComboBoxDialog(QDialog):
         self.data_name_combo.setCurrentIndex(default_index[0])
         
         # data name dropbox의 option이 ...일 경우, 이벤트 발생시킬 수 있도록 콜백 연결
-        self.data_name_combo.currentIndexChanged[str].connect(self.__on_data_name_changed)
+        self.data_name_combo.activated[str].connect(self.__on_data_name_changed)
 
         # Data type dropdown
         self.data_type_combo = CustomComboBox(self)
@@ -92,12 +92,23 @@ class CustomComboBoxDialog(QDialog):
         """)
         
     def __get_custom_file_name(self):
-        file_name = CustomInputDialog.getText(self.parent, "Data import", "Please enter the file name.", "")
+        result = CustomInputDialog.getText(self.parent, "Data import", "Please enter the file name.", "")
+        file_name = result[0]
+        reply = result[1]
+
+        # 유저가 cancel을 선택했을 경우
+        if not reply:
+            return None
+
+        # 파일명에 사용할 수 없는 특수문자 정의
+        invalid_chars = r'[\\/:*?"<>|]'
         
-        if file_name == "":
-            CustomMessageBox.warning(self.parent, "Data import", "Please enter a valid data name.")
+        if not file_name:
+            CustomMessageBox.warning(self.parent, "Data import", "File name cannot be empty.")
             self.__get_custom_file_name()
-            
+        elif re.search(invalid_chars, file_name):
+            CustomMessageBox.warning(self.parent, "Data import", "File name contains invalid characters: \\/:*?\"<>|")
+            self.__get_custom_file_name()
         else:
             return file_name
 
@@ -105,17 +116,16 @@ class CustomComboBoxDialog(QDialog):
         # 유저가 입력한 데이터가 ...일 경우, 직접 file name 수정할 수 있도록 Dialog 생성
         if text == "...":
             file_name = self.__get_custom_file_name()
+
+            if file_name is None:
+                return
         
             # ... 삭제 후, 유저가 입력한 file name으로 변경
             target_index = self.data_name_combo.findText("...")
-            self.data_name_combo.setItemText(target_index, file_name[0])
+            self.data_name_combo.setItemText(target_index, file_name)
             
             # ... 항목 추가
             self.data_name_combo.addItem("...")
-            
-            # 
-            # self.data_name_combo.removeItem(target_index)
-            # self.data_name_combo.addItem(file_name[0])
         
     def get_selections(self):
         """선택된 항목을 반환
@@ -353,15 +363,23 @@ class CustomDataTreeView(CustomDataTreeView):
             
     def remove_data(self):
         """TreeView 아이템 삭제하는 메서드"""
+
+        if self.selected_items is None:
+            return
         
+        if len(self.selected_items) == 0:
+            return
+
+        target_item_keys = []        
         # 선택된 항목 JSON data manager에 삭제 요청
         for item in self.selected_items:
             
             # 선택된 항목에서 key 추출
             item_key = "-".join(item)
+            target_item_keys.append(item_key)
             
-            # JSON data manager에 삭제 요청
-            self.json_data_manager.remove_data_to_target_json_file(item_key)
+        # JSON data manager에 삭제 요청
+        self.json_data_manager.remove_data_from_target_json_file(target_item_keys)
             
 class JSONDataViewer(QWidget):                 
     def __init__(self, json_data_manager, json_list_viewer, parent=None):
