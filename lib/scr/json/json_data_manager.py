@@ -1,6 +1,8 @@
 from .common import *
 import copy
 
+target_filename_extension = '.h5'
+
 class SaveThread(BackgroundThreadWorker):
     # 작업 완료 시그널
     # bool: data load 성공 여부
@@ -46,7 +48,8 @@ class SaveThread(BackgroundThreadWorker):
 
             if do_save:
                 try:
-                    save_dict_to_json(data[3], data[0])
+                    # save_dict_to_json(data[3], data[0])
+                    save_dict_to_h5(data[3], data[0])
                     count += 1
                     self.update_progress(count/total_count*100)
                     
@@ -78,12 +81,18 @@ class LoadThread(BackgroundThreadWorker):
         # 매개 변수 저장
         self.directory = directory
         self.target_file_name = target_file_name
-
+        
+    def __check_data_name_validity(self, key):
+        if len(key.split('-')) == 3:
+            return True
+        else:
+            return False
+    
     def run(self):
         """백그라운드 스레드에서 JSON 파일에서 데이터 로드"""
         
-        # 파일이 JSON 파일인지 확인
-        if self.target_file_name.endswith(".json"):
+        # 파일 확장자가 target_filename_extension 인지 확인
+        if self.target_file_name.endswith(target_filename_extension):
             # 파일 경로 구성
             file_path = os.path.join(self.directory, self.target_file_name)  
             
@@ -91,27 +100,52 @@ class LoadThread(BackgroundThreadWorker):
             
             try:
                 # JSON 파일에서 딕셔너리 불러오기
-                with open(file_path, 'r') as json_file:
-                    data = json.load(json_file)
-                    data_dict = {}
+                data = load_dict_from_h5(file_path)
+                data_dict = {}
+                
+                self.update_progress(10)
+                
+                # 딕셔너리 요소 순회하면서 dataframe 복원
+                count = 0
+                total_count = len(data)
+                for key, value in data.items():
+                    # key가 유효하지 않을 경우 뛰어넘음
+                    if not self.__check_data_name_validity(key):
+                        continue
                     
-                    self.update_progress(10)
+                    # 데이터프레임으로 변환
+                    df = pd.DataFrame(value)
 
-                    # 딕셔너리 요소 순회하면서 dataframe 복원
-                    count = 0
-                    total_count = len(data)
-                    for key, value in data.items():
-                        # 데이터프레임으로 변환
-                        df = pd.DataFrame(value)
+                    # 인덱스를 int로 변환
+                    df.index = df.index.astype(int)
+                    data_dict[key] = df
+                    
+                    count += 1
+                    self.update_progress(count/total_count*90 + 10)
 
-                        # 인덱스를 int로 변환
-                        df.index = df.index.astype(int)
-                        data_dict[key] = df
+                self.load_finished.emit(True, file_path, self.target_file_name, data_dict, Exception())
+                
+                # with open(file_path, 'r') as json_file:
+                #     data = json.load(json_file)
+                #     data_dict = {}
+                    
+                #     self.update_progress(10)
+
+                #     # 딕셔너리 요소 순회하면서 dataframe 복원
+                #     count = 0
+                #     total_count = len(data)
+                #     for key, value in data.items():
+                #         # 데이터프레임으로 변환
+                #         df = pd.DataFrame(value)
+
+                #         # 인덱스를 int로 변환
+                #         df.index = df.index.astype(int)
+                #         data_dict[key] = df
                         
-                        count += 1
-                        self.update_progress(count/total_count*90 + 10)
+                #         count += 1
+                #         self.update_progress(count/total_count*90 + 10)
 
-                    self.load_finished.emit(True, file_path, self.target_file_name, data_dict, Exception())
+                #     self.load_finished.emit(True, file_path, self.target_file_name, data_dict, Exception())
 
             except Exception as e:
                 self.load_finished.emit(False, file_path, self.target_file_name, {}, e)

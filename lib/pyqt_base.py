@@ -1,4 +1,5 @@
 from .base import *
+from .ui_common import *
 
 import os
 import time
@@ -1605,7 +1606,6 @@ class CustomDockWidget(QDockWidget):
         else:
             self.hide()  # 숨기기
             
-# QMainWindow
 class CustomMainWindow(QMainWindow):
     def __init__(self, title, app):
         super().__init__()
@@ -1616,17 +1616,19 @@ class CustomMainWindow(QMainWindow):
         # 메인 중앙 위젯 설정
         self.central_widget = QFrame(self)
         self.setCentralWidget(self.central_widget)
+        
+        # 중첩 도킹을 활성화하여 두 개의 dockwidget을 세로로 나눌 수 있도록 설정
+        # self.setDockNestingEnabled(True)
 
         # 아이콘 설정
         self.setWindowIcon(QIcon(PyQtAddon.convert_url(os.path.join(icons_directory, "program_icon.svg"))))
 
+        # 메인 윈도우 설정
+        self.setWindowTitle(title)
+        # 윈도우 최대 크기로 설정
         available_geometry = app.primaryScreen().availableGeometry()
         self.setGeometry(available_geometry)
-
-        # 메인 윈도우 설정
-        # self.setGeometry(0, 0, PyQtAddon.main_window_width, PyQtAddon.main_window_height)
-        # self.setMaximumSize(800, 600)  # 최대 크기 설정
-        self.setWindowTitle(title)
+        # 윈도우 스타일 설정
         self.setStyleSheet(f"""
                            QMainWindow {{
                                background-color: {PyQtAddon.get_color("background_color")};
@@ -1735,6 +1737,160 @@ class CustomMainWindow(QMainWindow):
         if layout_name in self.menu_layouts.keys():
             self.menu_layouts[layout_name].trigger()
 
+class ScrollWidget(QScrollArea):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # 스크롤 영역이 창 크기에 맞게 조정되도록 설정
+        self.setWidgetResizable(True)  
+        
+        # container 레이아웃 및 위젯 생성
+        self.__container_layout = QVBoxLayout()
+        self.__container_widget = QWidget()
+        self.__container_widget.setLayout(self.__container_layout)
+        
+        # layout margin 삭제
+        self.__container_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 표시할 widget 및 stylesheet 설정
+        self.setWidget(self.__container_widget)
+        self.setStyleSheet(f"""
+                            QWidget {{
+                                margin: 0px;
+                                padding: 0px;
+                                background-color: {PyQtAddon.get_color("background_color")};
+                                }}"""
+                                +PyQtAddon.vertical_scrollbar_style
+                                +PyQtAddon.horizontal_scrollbar_style) 
+        
+    def add_widget(self, widget):
+        self.__container_layout.addWidget(widget)
+        
+    def add_item(self, item):
+        self.__container_layout.addItem(item) 
+        
+class DropdownWidget(QWidget):
+    def __init__(self, text=None, parent=None):
+        super().__init__(parent)
+        
+        # 토글 버튼 생성
+        self.toggle_button = QPushButton(self)
+        
+        # 버튼 텍스트 설정
+        if text is not None:
+            self.toggle_button.setText(text)        
+            
+        # 버튼 액션 설정
+        self.toggle_button.clicked.connect(self.__toggle_dropdown)
+
+        # 확장할 위젯 컨테이너 생성
+        self.__dropdown_container = QWidget(self)
+        self.__dropdown_layout = QVBoxLayout(self.__dropdown_container)
+        self.__dropdown_container.setVisible(True)  # 처음에는 표시 상태로 설정
+        
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.toggle_button)
+        self.layout.addWidget(self.__dropdown_container)
+        self.setLayout(self.layout)
+        
+        self.disabled_button_style = f"""
+                                     QPushButton {{
+                                         background-color:none;
+                                         color:{UiStyle.get_color("title_text_color")};
+                                         border: none;
+                                         padding: 5px;
+                                     }}
+                                     QPushButton:hover {{
+                                         background-color: {PyQtAddon.get_color("point_color_5")}
+                                     }}
+                                     """
+        self.enabled_button_color = f"""
+                                    QPushButton {{
+                                        background-color:{UiStyle.get_color("point_color_5")};
+                                        color:{UiStyle.get_color("content_text_color")};
+                                        border: none;
+                                        padding: 5px;
+                                    }}
+                                    QPushButton:hover {{
+                                        background-color: {PyQtAddon.get_color("point_color_1")}
+                                    }}
+                                    """
+        
+        # 스타일 설정
+        self.toggle_button.setStyleSheet(self.enabled_button_color)
+        self.__dropdown_container.setStyleSheet(f"""
+                                                border:1px solid {UiStyle.get_color("point_color_5")};
+                                                """)
+        
+    def __toggle_dropdown(self):
+        """드롭다운 위젯을 표시하거나 숨김"""
+        is_visible = self.__dropdown_container.isVisible()
+        self.__dropdown_container.setVisible(not is_visible)
+        
+        if is_visible:
+            self.toggle_button.setStyleSheet(self.disabled_button_style)
+        else:
+            self.toggle_button.setStyleSheet(self.enabled_button_color)
+        
+    def add_widget(self, widget):
+        if isinstance(widget, QWidget):
+            self.__dropdown_layout.addWidget(widget)
+        elif isinstance(widget, QSpacerItem):
+            self.__dropdown_layout.addItem(widget)
+        else:
+            self.__dropdown_layout.addLayout(widget)
+            
+class LatchToggleButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        
+        self.setText(text)
+        self.setCheckable(True)  # 버튼을 체크 가능 상태로 설정
+        self.setStyleSheet(self.__get_button_style(False))  # 초기 스타일 설정
+        self.clicked.connect(self.__toggle_button_clicked)  # 클릭 시 이벤트 연결
+        
+        self.on_toggled = CustomEventHandler()
+        
+    def toggle(self):
+        # checked 일 경우 unchecked, unchecked일 경우 checked로 toggle state 전환
+        if self.isChecked():
+            self.setStyleSheet(self.__get_button_style(False))
+            self.on_toggled(False)
+        else:
+            self.setStyleSheet(self.__get_button_style(True))
+            self.on_toggled(True)
+        
+    def __toggle_button_clicked(self):
+        """토글 버튼 클릭 시 호출되는 메서드"""
+        if self.isChecked():
+            self.setStyleSheet(self.__get_button_style(True))
+            self.on_toggled(True)
+        else:
+            self.setStyleSheet(self.__get_button_style(False))
+            self.on_toggled(False)
+            
+    def __get_button_style(self, is_checked):
+        """버튼 스타일을 반환하는 메서드"""
+        if is_checked:
+            return f"""
+                QPushButton {{
+                    background-color: {UiStyle.get_color("point_color_6")};
+                    color: {UiStyle.get_color("content_text_color")};
+                    padding: 4px 8px;
+                    border-radius: 0px;
+                    border:none;
+                }}
+            """
+        else:
+            return f"""
+                QPushButton {{
+                    background-color: {UiStyle.get_color("point_color_1")};
+                    color: {UiStyle.get_color("content_text_color")};
+                    padding: 4px 8px;
+                    border-radius: 0px;
+                    border:none;
+                }}
+            """   
 """위젯 신규 정의"""
 # NoDataWidget 신규 정의
 class CustomNoDataWidget(QWidget):

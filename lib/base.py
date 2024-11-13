@@ -5,6 +5,7 @@ import ctypes # 관리자 권한 요청용
 import shutil # 폰트 설치용
 import subprocess # 폰트 설치용
 import json # json 파일 입출력
+import orjson # 빠른 json 파일 입출력
 import ast # string to dictionary
 from datetime import datetime # 현재 시간 측정
 from bs4 import BeautifulSoup # HTML to dictionary
@@ -22,6 +23,22 @@ from mpl_toolkits.mplot3d import Axes3D
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from pathlib import Path
 
+class CustomEventHandler:
+    def __init__(self):
+        self._callbacks = []
+
+    def __iadd__(self, callback):
+        self._callbacks.append(callback)
+        return self
+
+    def __isub__(self, callback):
+        self._callbacks.remove(callback)
+        return self
+
+    def __call__(self, *args, **kwargs):
+        for callback in self._callbacks:
+            callback(*args, **kwargs)
+            
 def get_sorted_indices(original_list):
     # 원래 리스트와 인덱스를 (인덱스, 값) 형태로 결합
     indexed_list = list(enumerate(original_list))
@@ -86,20 +103,59 @@ def html_to_dict(html_data):
 #############################################
 #              JSON 파일 관련               #
 #############################################
-# 딕셔너리를 JSON 파일로 저장하는 함수
+def read_json_as_dict(file_path):
+    # JSON 파일을 읽어와 dictionary로 변환하는 함수
+    with open(file_path, 'rb') as f:  # 바이너리 모드로 파일 열기
+        data = orjson.loads(f.read())  # 파일 데이터를 읽어와서 파싱
+    return data
+
+def df_to_str_dict(dataframe):
+    # DataFrame을 딕셔너리로 변환하고 키를 문자열로 설정하는 함수
+    dict_data = dataframe.to_dict()
+    str_dict_data = {str(k): {str(inner_k): inner_v for inner_k, inner_v in v.items()} for k, v in dict_data.items()}
+    return str_dict_data
+
 def save_dict_to_json(file_path, dictionary):
     # dictionary 내의 모든 요소가 df일 때
     serializable_dictionary = {}
     for key in dictionary.keys():
-        serializable_dictionary[key] = dictionary[key].to_dict()
+        serializable_dictionary[key] = df_to_str_dict(dictionary[key])
 
-    with open(file_path, 'w') as json_file:
-        json.dump(serializable_dictionary, json_file, indent=4)  # 딕셔너리를 JSON 형식으로 저장
+    with open(file_path, 'wb') as json_file:  # 'wb' 모드로 열기 (orjson은 바이너리 모드 필요)
+        json_data = orjson.dumps(serializable_dictionary, option=orjson.OPT_INDENT_2)  # 2-스페이스 들여쓰기 옵션
+        json_file.write(json_data)
+        
+def save_dict_to_h5(file_path, dictionary):
+    # HDF5 파일을 'w' 모드로 열고 각 DataFrame을 저장
+    with pd.HDFStore(file_path, mode='w') as h5_file:
+        for key, df in dictionary.items():
+            # h5에 저장하기 적합한 형태로 key 변환
+            key_list = key.split('-')
+            modified_key = '_'.join(key_list)
+            # 각 DataFrame을 HDF5 파일의 그룹에 저장
+            h5_file.put(modified_key, df, format='table', complevel=5, complib='zlib')
+
 
 # JSON 파일로부터 딕셔너리를 불러오는 함수
 def load_dict_from_json(file_path):
     with open(file_path, 'r') as json_file:
         return json.load(json_file)
+    
+def load_dict_from_h5(file_path):
+    # 빈 딕셔너리 생성
+    loaded_dict = {}
+
+    # HDF5 파일 열기
+    with pd.HDFStore(file_path, mode='r') as h5_file:
+        # 저장된 각 key를 순회하며 DataFrame으로 읽어와 딕셔너리에 추가
+        for key in h5_file.keys():
+            # `key[1:]`는 HDF5의 key가 '/'로 시작하기 때문에 이를 제거하기 위함
+            # h5 저장을 위해 '_'로 변환된 key를 '-'로 변환
+            key_list = key[1:].split('_')
+            modified_key = '-'.join(key_list)
+            loaded_dict[modified_key] = h5_file[key]
+
+    return loaded_dict
 
 #############################################
 #                  시간 관련                #

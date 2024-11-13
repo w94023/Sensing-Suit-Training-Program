@@ -311,6 +311,40 @@ class CustomDataTreeView(CustomDataTreeView):
         """TreeView위에서 파일 drag 시, 파일 명 및 url을 가지고 있다면 허용"""
         if event.mimeData().hasText() and event.mimeData().hasUrls():
             event.acceptProposedAction()
+            
+    def __get_data_info_from_user(self, data_name, data_type, data_state):
+        # treeview로 드랍된 파일의 data name, data type, data state를 유저에게 받아오고, 유효성 검사하는 메서드
+        
+        # data_name, data_type, data_state의 정확한 입력을 위해 유저에게 dialog로 받아옴
+        dialog = CustomComboBoxDialog([data_name, data_type, data_state])
+        
+        if dialog.exec_() == QDialog.Accepted:
+            # 사용자가 OK를 클릭한 경우 선택된 항목을 가져옴
+            selections = dialog.get_selections()
+            
+            # 선택된 항목 분류
+            new_data_name = selections[0]
+            new_data_type = selections[1]
+            new_data_state = selections[2]
+            
+            if "-" in new_data_name:
+                CustomMessageBox.critical(None, "Data import error", "'-' cannot be used in a name for the data.")
+                return self.__get_data_info_from_user(data_name, data_type, data_state)
+            
+            if new_data_type != "marker" and new_data_type != "sensor" and new_data_type != "wireframe":
+                CustomMessageBox.critical(None, "Data import error", "Invalid data type")
+                return None, None, None
+            
+            if new_data_state != "raw" and new_data_type != "refined":
+                CustomMessageBox.critical(None, "Data import error", "Invalid data state")
+                return None, None, None
+            
+            return new_data_name, new_data_type, new_data_state
+                
+        else:
+            # 사용자가 Cancel을 클릭한 경우 작업 종료
+            CustomMessageBox.warning(None, "Data import error", "The task has been canceled.")
+            return None, None, None
 
     def dropEvent(self, event: QDropEvent):
         """TreeView에 파일 drop 시, 파일 명 및 url을 가지고 있다면 허용"""
@@ -331,32 +365,32 @@ class CustomDataTreeView(CustomDataTreeView):
             
             # data_name, data_type, data_state의 정확한 입력을 위해 유저에게 dialog로 받아옴
             # self.__check_validity_of_file_name 메서드로 인식된 name, type, state를 default값으로 사용
-            dialog = CustomComboBoxDialog([data_name, data_type, data_state])
-                    
-            # 사용자가 OK를 클릭한 경우 선택된 항목을 가져옴
-            if dialog.exec_() == QDialog.Accepted:
-                
-                # 드랍된 파일의 data_type 저장
-                data_type = dialog.get_selections()[1]
-                
-                # 드랍된 파일의 path 불러오기 (url)
-                file_path = event.mimeData().urls()[0].toLocalFile()
-                
-                # 드랍된 csv파일로 부터 pd.DataFrame 불러오기
-                key = dialog.get_selections()[0]+"-"+dialog.get_selections()[1]+"-"+dialog.get_selections()[2]
-                df = load_csv_file(file_path, data_type, parent=self.parent)
-
-                # 파일 읽어오기에 실패했을 경우, 이벤트 종료
-                if df is None:
-                    return
-                
-                # 로드된 json 파일에 csv파일로부터 import한 데이터 추가
-                self.json_data_manager.add_data_to_target_json_file(key, df)
-                
-            # 사용자가 Cancel을 클릭한 경우 작업 종료
-            else:
-                CustomMessageBox.critical(None, "Data import error", "The task has been canceled.")
+            data_name, data_type, data_state = self.__get_data_info_from_user(data_name, data_type, data_state)
+            print(data_name, data_type, data_state)
+            
+            if data_name is None:
                 return
+            
+            # 드랍된 파일의 path 불러오기 (url)
+            file_path = event.mimeData().urls()[0].toLocalFile()
+            
+            # 드랍된 csv파일로 부터 pd.DataFrame 불러오기
+            key = data_name+"-"+data_type+"-"+data_state
+            
+            # 키 유효성 검사
+            if len(key.split('-')) != 3:
+                CustomMessageBox.critical(None, "Data import error", "The data key is incorrect.")
+                return
+            
+            df = load_csv_file(file_path, data_type, parent=self.parent)
+
+            # 파일 읽어오기에 실패했을 경우, 이벤트 종료
+            if df is None:
+                return
+            
+            # 로드된 json 파일에 csv파일로부터 import한 데이터 추가
+            self.json_data_manager.add_data_to_target_json_file(key, df)
+
                 
         else:
             event.ignore()

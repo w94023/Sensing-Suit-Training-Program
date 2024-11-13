@@ -1,6 +1,9 @@
 from .common import *
 from .tree_view import *
 
+target_filename_extension = '.h5'
+
+
 class CustomModel(QStandardItemModel):
     def __init__(self):
         super().__init__()
@@ -158,8 +161,8 @@ class JSONListViewer(QWidget):
         # Directory에 존재하는 파일 읽어오기
         for file_name in os.listdir(self.directory):
 
-            # 파일인지 확인하고, 확장자가 .json인지 확인
-            if os.path.isfile(os.path.join(self.directory, file_name)) and file_name.endswith('.json'):
+            # 파일인지 확인하고, 확장자가 target_filename_extension 인지 확인
+            if os.path.isfile(os.path.join(self.directory, file_name)) and file_name.endswith(target_filename_extension):
                 
                 # JSON 파일일 경우, 목록에 추가
                 file_names.append(file_name)
@@ -218,7 +221,7 @@ class JSONListViewer(QWidget):
         if old_file_name == new_file_name:
             return
         
-        if new_file_name.endswith('.json'):
+        if new_file_name.endswith(target_filename_extension):
             new_file_path = os.path.join(self.directory, new_file_name)
             
             self.json_data_manager.rename_json_data(old_file_name, new_file_name)
@@ -233,7 +236,7 @@ class JSONListViewer(QWidget):
                 CustomMessageBox.critical(self.parent, "Error", f"Failed to rename file: {e}")
                 
         else:
-            CustomMessageBox.warning(self.parent, "Warning", "The file name must end with '.json'")
+            CustomMessageBox.warning(self.parent, "Warning", f"The file name must end with '{target_filename_extension}")
 
     def refresh_list(self):
         is_data_changed = False
@@ -273,7 +276,7 @@ class JSONListViewer(QWidget):
     def add_file(self):
         """파일을 리스트 및 디렉토리에 추가하는 메서드"""
         # 기본 파일 이름 설정
-        default_file_name = get_current_time()+"_data.json"
+        default_file_name = get_current_time()+"_data.h5"
 
         # Dialog를 통해 file 명과 경로 받아옴
         new_file_name, file_path = self.__set_file_name(default_file_name)
@@ -292,7 +295,7 @@ class JSONListViewer(QWidget):
         # 파일 생성
         try:
             # 딕셔너리를 JSON 형식으로 파일에 저장
-            save_dict_to_json(file_path, {})
+            save_dict_to_h5(file_path, {})
             
             # 목록 추가
             self.tree_view.add_item(new_file_name, False, False)
@@ -325,11 +328,18 @@ class JSONListViewer(QWidget):
         else:
             target_items.append(self.json_data_manager.file_name)
 
+        message = "Are you sure you want to delete the selected file?<br>"
+        for i, target_item in enumerate(target_items):
+            if i == len(target_items)-1:
+                message += "· " + target_item
+            else:
+                message += "· " + target_item + "<br>"
+            
         # 선택된 파일들에 대해 사용자에게 확인 메시지 띄우기
         reply = CustomMessageBox.question(
             self.parent, 
             "File deletion", 
-            "Are you sure you want to delete the selected file?", 
+            message,
             QMessageBox.Yes | QMessageBox.No, 
             QMessageBox.No
         )
@@ -379,9 +389,9 @@ class JSONListViewer(QWidget):
 
         # 사용자가 입력을 확인하면 파일 이름 설정
         if ok and file_name:
-            # 파일 이름에 확장자가 없으면 .json을 추가
-            if not file_name.endswith('.json'):
-                file_name += ".json"
+            # 파일 이름에 확장자가 없으면 target_filename_extension 추가
+            if not file_name.endswith(target_filename_extension):
+                file_name += target_filename_extension
             
             # 파일 경로 설정
             file_path = os.path.join(self.directory, file_name)

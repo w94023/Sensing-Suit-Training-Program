@@ -1,7 +1,7 @@
 from .common import *
 import copy
 
-class WireframeStrainCalculator():
+class Calculator():
     marker_matrix = np.array([
         [-1, -1, -1, -1, -1, +1, +1, +1, -1],
         [-1, -1, -1, +1, +1, +1, +1, +1, -1],
@@ -13,8 +13,26 @@ class WireframeStrainCalculator():
     
     def __init__(self):
         self.indexed_marker_matrix = None
+        
+    def __get_strain(self, df, index1, index2, initial_length):
+        # 데이터가 들어갈 빈 행렬 생성
+        len = np.zeros((df.shape[0], 1))
+        
+        # X, Y, Z축 차이의 제곱 더하기
+        # .to_numpy() 적용 시, (nrow, ) 형식으로 나오기 때문에, (nrow, 1) 형식으로 np.reshape 필요
+        len += ((df.iloc[:, 3*index1+0 + 1].to_numpy() - df.iloc[:, 3*index2+0 + 1].to_numpy()) ** 2).reshape(np.shape(len)[0], 1) # X축
+        len += ((df.iloc[:, 3*index1+1 + 1].to_numpy() - df.iloc[:, 3*index2+1 + 1].to_numpy()) ** 2).reshape(np.shape(len)[0], 1) # Y축
+        len += ((df.iloc[:, 3*index1+2 + 1].to_numpy() - df.iloc[:, 3*index2+2 + 1].to_numpy()) ** 2).reshape(np.shape(len)[0], 1) # Z축
 
-    def get_wireframe_strain(self):
+        # sqrt 적용
+        len = np.sqrt(len)
+        
+        # strain 게산 (%단위)
+        strain = (len-initial_length)/initial_length * 100
+
+        return strain
+        
+    def get_wireframe_strain(self, df):
         # df = copy.deepcopy(df_input)
         # 1~34 마커는 순서 변경 없이 사용
         # df.iloc[:, 0:35]
@@ -27,151 +45,48 @@ class WireframeStrainCalculator():
         # 마커가 존재하는 곳에 마커의 index를 부여한 matrix 생성
         count = 0
         for i in range(ncols):
-            for j in range(nrows):
+            for j in range(nrows-1, -1, -1): # 루프 역순으로 돌리기 (5, 4, 3, 2, 1, 0)
                 if self.marker_matrix[j, i] == 1:
                     self.indexed_marker_matrix[j, i] = count
                     count += 1
 
-        print(self.marker_matrix)
-        print(self.indexed_marker_matrix)
+        wireframe_strain = []
+        # horizontal wireframe
+        for i in range(ncols-1):
+            for j in range(nrows-1, -1, -1):
+                if self.indexed_marker_matrix[j, i] > -1:
+                    if self.indexed_marker_matrix[j, i+1] > -1:
+                        wireframe_strain.append(self.__get_strain(df, self.indexed_marker_matrix[j ,i], self.indexed_marker_matrix[j, i+1], 50))
+                            
+        # vertical wireframe
+        for i in range(ncols):
+            for j in range((nrows-1)-1, -1, -1):
+                if self.indexed_marker_matrix[j, i] > -1:
+                    if self.indexed_marker_matrix[j+1, i] > -1:
+                        wireframe_strain.append(self.__get_strain(df, self.indexed_marker_matrix[j ,i], self.indexed_marker_matrix[j+1, i], 50))
+                            
+        # lower diagonal wireframe
+        for i in range(ncols-1):
+            for j in range((nrows-1)-1, -1, -1):
+                if self.indexed_marker_matrix[j, i] > -1:
+                    if self.indexed_marker_matrix[j+1, i+1] > -1:
+                        wireframe_strain.append(self.__get_strain(df, self.indexed_marker_matrix[j ,i], self.indexed_marker_matrix[j+1, i+1], 70))
+                            
+        # upper diagonal wireframe
+        for i in range(ncols-1):
+            for j in range(nrows-1, 0, -1):
+                if self.indexed_marker_matrix[j, i] > -1:
+                    if self.indexed_marker_matrix[j-1, i+1] > -1:
+                        wireframe_strain.append(self.__get_strain(df, self.indexed_marker_matrix[j ,i], self.indexed_marker_matrix[j-1, i+1], 70))
+                            
+        # 리스트의 배열을 가로로 병합하여 변환
+        wireframe_strain_array = np.hstack(wireframe_strain)
         
-    
-
-# function strain = CalculateStrain(rawData, markerMatrix)
-#     data = zeros(size(rawData, 1), 35, 3);
-#     % Wireframe 구성용 마커는 순서 변경 없이 사용
-#     data(:, (1:34), :) = rawData(:, (1:34), :);
-#     % 팔꿈치 마커를 35번으로 변경
-#     data(:, 35, :) = rawData(:, 38, :);
-    
-#     row = size(markerMatrix, 1);
-#     col = size(markerMatrix, 2);
-
-#     % 인덱싱
-#     count = 1;
-#     for i = 1:col
-#         for j = 1:row
-#             if markerMatrix(j, i) == 1
-#                 markerMatrix(j, i) = count;
-#                 count = count+1;
-#             end
-#         end
-#     end
-    
-#     % Horizontal
-#     count = 1;
-#     for i = 1:col-1
-#         for j = 1:row
-#             if markerMatrix(j, i) > 0
-#                 if markerMatrix(j, i+1) > 0
-#                     horiStrain(:, count) = findlength(data, markerMatrix(j, i), markerMatrix(j, i+1)) * 1000 / 50;
-#                     count = count+1;
-#                 end
-#             end
-#         end
-#     end
-
-#     % Vertical
-#     count = 1;
-#     for i = 1:col
-#         for j = 1:row-1
-#             if markerMatrix(j, i) > 0
-#                 if markerMatrix(j+1, i) > 0
-#                     vertLen(:, count) = findlength(data, markerMatrix(j, i), markerMatrix(j+1, i)) * 1000 / 50;
-#                     count = count+1;
-#                 end
-#             end
-#         end
-#     end
-    
-#     % Lower diagonal
-#     count = 1;
-#     for i = 1:col-1
-#         for j = 1:row-1
-#             if markerMatrix(j, i) > 0
-#                 if markerMatrix(j+1, i+1) > 0
-#                     upperDStrain(:, count) = findlength(data, markerMatrix(j, i), markerMatrix(j+1, i+1)) * 1000 / 70;
-#                     count = count+1;
-#                 end
-#             end
-#         end
-#     end
-    
-#     % Upper diagonal
-#     count = 1;
-#     for i = 1:col-1
-#         for j = 2:row
-#             if markerMatrix(j, i) > 0
-#                 if markerMatrix(j-1, i+1) > 0
-#                     lowerDStrain(:, count) = findlength(data, markerMatrix(j, i), markerMatrix(j-1, i+1)) * 1000 / 70;
-#                     count = count+1;
-#                 end
-#             end
-#         end
-#     end
-#     strain = [horiStrain, vertLen, upperDStrain, lowerDStrain];
-# end
-
-# function dataOut = findlength(markerData, startPoint, endPoint)
-
-#     leng = 0;
-#     for i = 1:3
-#         leng = leng + (markerData(:, startPoint, i)-markerData(:, endPoint, i)).^2;
-#     end
-   
-#     dataOut(:, 1) = sqrt(leng);
-# end
-
-class WireframeStrainCalculationWidget(QWidget):
-    def __init__(self, json_data_manager, parent=None):
-        self.parent= parent
-        super().__init__(self.parent)
-
-        self.calculaotor = WireframeStrainCalculator()
-
-        self.json_data_manager = json_data_manager
-
-        self.__init_ui()
-
-    def __init_ui(self):
-        def __set_button_style(button, height):
-            button.setFixedSize(0, height)
-            button.setMinimumSize(0, height)
-            button.setMaximumSize(16777215, height)
-            button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-            button.setStyleSheet(f"""
-                                  QPushButton {{
-                                      background-color: {PyQtAddon.get_color("point_color_1")};
-                                      color: {PyQtAddon.get_color("content_text_color")};
-                                      padding: 4px 8px;
-                                      border-radius: 0px;
-                                      border: none;
-                                  }}
-                                  QPushButton:hover {{
-                                      background-color: {PyQtAddon.get_color("point_color_5")};
-                                      border: none;
-                                  }}
-                                  """)
-            
-        # 레이아웃 생성
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-            
-        # strain 데이터 계산 버튼
-        button = QPushButton("Calculate strain", self.parent)
-        button.clicked.connect(self.__calculate_wireframe_strain)
-        __set_button_style(button, 20)
-
-        # 레이아웃에 위젯 추가
-        layout.addWidget(button)
+        # column 생성
+        df_columns = []
+        for i in range(len(wireframe_strain)):
+            df_columns.append("Wireframe"+str(i+1))
         
-        self.setMaximumHeight(300)
-        self.setStyleSheet(f"""
-                            QWidget {{
-                                margin: 0px;
-                                padding: 0px;
-                                background-color: {PyQtAddon.get_color("background_color")};
-                                }}""")
-     
-    def __calculate_wireframe_strain(self):
-        self.calculaotor.get_wireframe_strain()
+        # DataFrame으로 변환
+        df = pd.DataFrame(wireframe_strain_array, columns=df_columns)
+        return df

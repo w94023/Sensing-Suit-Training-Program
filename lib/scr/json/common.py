@@ -54,22 +54,6 @@ def create_tree_view_button(icon_name, width, height, callback=None):
     
     return tree_view_button
 
-class CustomEventHandler:
-    def __init__(self):
-        self._callbacks = []
-
-    def __iadd__(self, callback):
-        self._callbacks.append(callback)
-        return self
-
-    def __isub__(self, callback):
-        self._callbacks.remove(callback)
-        return self
-
-    def __call__(self, *args, **kwargs):
-        for callback in self._callbacks:
-            callback(*args, **kwargs)
-
 class IconRightDelegate(QStyledItemDelegate):
     """아이콘을 항목의 오른쪽 끝에 배치하는 델리게이트"""
     def __init__(self, *args, **kwargs):

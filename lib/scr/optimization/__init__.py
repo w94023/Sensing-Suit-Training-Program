@@ -1,1 +1,2 @@
-from .optimizer import OptimalSensorPlacementWidget
+# from .optimizer import OptimalSensorPlacementWidget
+from .widget.optimizer import OptimizationWidget
