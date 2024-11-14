@@ -1612,6 +1612,7 @@ class CustomMainWindow(QMainWindow):
 
         # close 이벤트 등록
         self.on_closed_callback_list = []
+        self.on_resized = CustomEventHandler()
 
         # 메인 중앙 위젯 설정
         self.central_widget = QFrame(self)
@@ -1687,6 +1688,10 @@ class CustomMainWindow(QMainWindow):
         self.docking_widgets = {}
         self.menu_layouts = {}
         
+    def resizeEvent(self, event):
+        self.on_resized()
+        super().resizeEvent(event)
+        
     def register_on_closed_event(self, callback):
         self.on_closed_callback_list.append(callback)
         
@@ -1723,6 +1728,7 @@ class CustomMainWindow(QMainWindow):
 
     def layout_action(self, dock_widgets_to_show, dock_widgets_locations, callback):
         for dock_widget in self.docking_widgets.values():
+            # self.removeDockWidget(dock_widget)
             dock_widget.hide()
 
         for i, dock_widget in enumerate(dock_widgets_to_show):

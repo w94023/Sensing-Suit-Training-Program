@@ -135,6 +135,16 @@ def save_dict_to_h5(file_path, dictionary):
             # 각 DataFrame을 HDF5 파일의 그룹에 저장
             h5_file.put(modified_key, df, format='table', complevel=5, complib='zlib')
 
+def export_dict_data(file_path, df, type):
+    if type == '.h5':
+        # HDF5 파일을 'w' 모드로 열고 각 DataFrame을 저장
+        with pd.HDFStore(file_path, mode='w') as h5_file:
+            for key, df in df.items():
+                # h5에 저장하기 적합한 형태로 key 변환
+                key_list = key.split('-')
+                modified_key = '_'.join(key_list)
+                # 각 DataFrame을 HDF5 파일의 그룹에 저장
+                h5_file.put(modified_key, df, format='table', complevel=5, complib='zlib')
 
 # JSON 파일로부터 딕셔너리를 불러오는 함수
 def load_dict_from_json(file_path):
