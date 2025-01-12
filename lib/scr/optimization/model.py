@@ -14,9 +14,12 @@ class ModelBuilder():
     def __custom_loss(self, model, alpha):
         def loss(y_true, y_pred):
             # Mean squared error
-            mse = K.mean(K.square(y_pred - y_true), axis=-1)
+            # mse = K.mean(K.square(y_pred - y_true), axis=-1)
+            # rmse = K.sqrt(mse)  # RSME 계산
+            mae = K.mean(K.abs(y_pred - y_true), axis=-1)
+            # capped_mse = K.minimum(mae, 100.0)
             # 최종 손실 계산
-            return mse * alpha
+            return mae * alpha
         return loss
 
     def build_encoder_model(self):
@@ -47,7 +50,8 @@ class ModelBuilder():
         Z = Dense(self.output_size, activation = 'linear')(Z)
     
         model = Model(inputs = [X], outputs = [Z])
-        model.add_loss(lambda_value * K.sum(K.mean(EV, axis = 0)) / self.input_size)
+        # model.add_loss(lambda_value * K.sum(K.mean(EV, axis = 0)) / self.input_size)
+        model.add_loss(lambda_value * K.sum(K.mean(EV, axis = 0)))
         model.compile(optimizer=opt, loss = self.__custom_loss(model, 1 - lambda_value), metrics = ['accuracy'])
         
         if encoder_import:

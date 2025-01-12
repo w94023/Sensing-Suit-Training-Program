@@ -2,6 +2,8 @@ from ...pyqt_base import *
 import csv
 from enum import Enum
 
+from ..pyqt.widget import (CustomMessageBox)
+
 class DataType(Enum):
     MotiveExportedMarkerData = 1
     RefinedMarkerData = 2
@@ -15,7 +17,7 @@ def load_csv_file(file_path, file_type, parent=None):
 
     Args:
         file_path (str): Import 대상 CSV 파일 경로
-        file_type (str): CSV 파일 타입 ("marker" or "sensor")
+        file_type (str): CSV 파일 타입 ("marker" or "sensor or "wireframe")
         parent (QWidget): 부모 위젯. Default to None
 
     Returns:
@@ -26,6 +28,8 @@ def load_csv_file(file_path, file_type, parent=None):
         return __load_marker_csv_file_data(Path(file_path), parent)
     elif file_type == "sensor":
         return __load_sensor_csv_file_data(Path(file_path), parent)
+    elif file_type == "wireframe":
+        return __load_wireframe_csv_file_data(Path(file_path), parent)
     else:
         CustomMessageBox.critical(parent, "CSV data import error", "The data type is invalid (it must be recognized as either a marker or a sensor).")
         return None
@@ -123,7 +127,7 @@ def __load_marker_csv_file_data(file_path, parent):
 
     # 데이터 pd.DataFrame으로 변환 및 타입 분류
     df, df_type = __type_classifier(data_2d_list)
-
+    
     if df_type == DataType.MotiveExportedMarkerData:
         if (df.shape[1]-1) % 3 != 0:
             CustomMessageBox.critical(parent, "CSV data import error", "The number of columns is not a multiple of 3")
@@ -202,5 +206,45 @@ def __load_sensor_csv_file_data(file_path, parent):
     for i in range(df.shape[1]-1):
         column_labels.append("Sensor"+str(i+1))
     df.columns = column_labels
+    
+    return df
+
+def __load_wireframe_csv_file_data(file_path, parent):
+    """Wireframe 타입으로 인식된 CSV파일의 데이터 불러오는 메서드
+
+    Args:
+        file_path (str): Import 대상 CSV 파일 경로
+        parent (QWidget): 부모 위젯. Default to None
+
+    Returns:
+        (pd.DataFrame): Import 결과 데이터, 데이터 읽기에 실패했을 경우 None 반환
+    """
+
+    # 2D 리스트로 CSV 파일 읽기
+    data_2d_list = []
+
+    # CSV 파일 열기 및 읽기
+    with open(file_path, newline='', encoding='utf-8') as csvfile:
+        csvreader = csv.reader(csvfile)  # csv.reader로 파일을 읽음
+        for row in csvreader:
+            data_2d_list.append(row)  # 각 행을 2D 리스트에 추가
+
+    # 주어진 데이터 내 가장 큰 열의 수 계산
+    max_columns = max(len(row) for row in data_2d_list)
+
+    # row 선택 (7개 행 버림)
+    selected_rows = data_2d_list[7:]
+    
+    # column 선택 (첫 열 버림 (공백))
+    selected_columns = list(range(1, max_columns))
+    
+    # 열 이름 선택
+    column_names = [data_2d_list[6][i] for i in selected_columns]
+    
+    # 슬라이싱된 데이터를 기반으로 새로운 리스트 생성
+    filtered_data = [[row[i] for i in selected_columns] for row in selected_rows]
+
+    # DataFrame으로 변환
+    df = pd.DataFrame(filtered_data, columns=column_names, dtype=float)
     
     return df

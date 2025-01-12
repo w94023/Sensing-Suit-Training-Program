@@ -5,7 +5,7 @@ import ctypes # 관리자 권한 요청용
 import shutil # 폰트 설치용
 import subprocess # 폰트 설치용
 import json # json 파일 입출력
-import orjson # 빠른 json 파일 입출력
+# import orjson # 빠른 json 파일 입출력
 import ast # string to dictionary
 from datetime import datetime # 현재 시간 측정
 from bs4 import BeautifulSoup # HTML to dictionary
@@ -19,8 +19,8 @@ import matplotlib as mpl # 폰트 캐시 초기화용
 import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation
 
-from mpl_toolkits.mplot3d import Axes3D
-from statsmodels.nonparametric.smoothers_lowess import lowess
+# from mpl_toolkits.mplot3d import Axes3D
+# from statsmodels.nonparametric.smoothers_lowess import lowess
 from pathlib import Path
 
 class CustomEventHandler:
@@ -55,87 +55,87 @@ def get_sorted_indices(original_list):
 #############################################
 #             Dictionary 관련               #
 #############################################
-def remove_items_with_text_key(my_dict, text):
-    """text 키를 가진 모든 딕셔너리 요소를 삭제하는 함수"""
-    # 삭제할 키를 저장할 리스트
-    keys_to_remove = [key for key, value in my_dict.items() if text in key]
+# def remove_items_with_text_key(my_dict, text):
+#     """text 키를 가진 모든 딕셔너리 요소를 삭제하는 함수"""
+#     # 삭제할 키를 저장할 리스트
+#     keys_to_remove = [key for key, value in my_dict.items() if text in key]
 
-    # 딕셔너리에서 해당 키를 가진 요소 삭제
-    for key in keys_to_remove:
-        del my_dict[key]
+#     # 딕셔너리에서 해당 키를 가진 요소 삭제
+#     for key in keys_to_remove:
+#         del my_dict[key]
 
-def dict_to_html_table(data_dict):
-    """딕셔너리를 HTML 테이블로 변환하는 함수"""
-    html = "<table border='1' cellpadding='5'>"
-    html += "<tr><th>Key</th><th>Value</th></tr>"
+# def dict_to_html_table(data_dict):
+#     """딕셔너리를 HTML 테이블로 변환하는 함수"""
+#     html = "<table border='1' cellpadding='5'>"
+#     html += "<tr><th>Key</th><th>Value</th></tr>"
     
-    for key, value in data_dict.items():
-        html += f"<tr><td>{key}</td><td>{value}</td></tr>"
+#     for key, value in data_dict.items():
+#         html += f"<tr><td>{key}</td><td>{value}</td></tr>"
     
-    html += "</table>"
-    return html
+#     html += "</table>"
+#     return html
 
-def html_to_dict(html_data):
-    """HTML 테이블 데이터를 딕셔너리로 변환하는 함수"""
-    soup = BeautifulSoup(html_data, 'html.parser')
+# def html_to_dict(html_data):
+#     """HTML 테이블 데이터를 딕셔너리로 변환하는 함수"""
+#     soup = BeautifulSoup(html_data, 'html.parser')
     
-    # 빈 딕셔너리 생성
-    data_dict = {}
+#     # 빈 딕셔너리 생성
+#     data_dict = {}
     
-    # 테이블 찾기
-    table = soup.find('table')
-    if not table:
-        raise ValueError("HTML에 테이블이 없습니다.")
+#     # 테이블 찾기
+#     table = soup.find('table')
+#     if not table:
+#         raise ValueError("HTML에 테이블이 없습니다.")
     
-    # 테이블 행들 가져오기 (첫 번째 행은 헤더이므로 건너뜀)
-    rows = table.find_all('tr')[1:]
+#     # 테이블 행들 가져오기 (첫 번째 행은 헤더이므로 건너뜀)
+#     rows = table.find_all('tr')[1:]
     
-    # 각 행에서 key-value 추출
-    for row in rows:
-        cells = row.find_all('td')
-        if len(cells) == 2:  # key와 value 두 개의 셀이 있는지 확인
-            key = cells[0].get_text(strip=True)  # 첫 번째 셀: key
-            value = cells[1].get_text(strip=True)  # 두 번째 셀: value
-            data_dict[key] = value
+#     # 각 행에서 key-value 추출
+#     for row in rows:
+#         cells = row.find_all('td')
+#         if len(cells) == 2:  # key와 value 두 개의 셀이 있는지 확인
+#             key = cells[0].get_text(strip=True)  # 첫 번째 셀: key
+#             value = cells[1].get_text(strip=True)  # 두 번째 셀: value
+#             data_dict[key] = value
     
-    return data_dict
+#     return data_dict
 
 #############################################
 #              JSON 파일 관련               #
 #############################################
-def read_json_as_dict(file_path):
-    # JSON 파일을 읽어와 dictionary로 변환하는 함수
-    with open(file_path, 'rb') as f:  # 바이너리 모드로 파일 열기
-        data = orjson.loads(f.read())  # 파일 데이터를 읽어와서 파싱
-    return data
+# def read_json_as_dict(file_path):
+#     # JSON 파일을 읽어와 dictionary로 변환하는 함수
+#     with open(file_path, 'rb') as f:  # 바이너리 모드로 파일 열기
+#         data = orjson.loads(f.read())  # 파일 데이터를 읽어와서 파싱
+#     return data
 
-def df_to_str_dict(dataframe):
-    # DataFrame을 딕셔너리로 변환하고 키를 문자열로 설정하는 함수
-    dict_data = dataframe.to_dict()
-    str_dict_data = {str(k): {str(inner_k): inner_v for inner_k, inner_v in v.items()} for k, v in dict_data.items()}
-    return str_dict_data
+# def save_dict_to_json(file_path, dictionary):
+#     # dictionary 내의 모든 요소가 df일 때
+#     serializable_dictionary = {}
+#     for key in dictionary.keys():
+#         serializable_dictionary[key] = df_to_str_dict(dictionary[key])
 
-def save_dict_to_json(file_path, dictionary):
-    # dictionary 내의 모든 요소가 df일 때
-    serializable_dictionary = {}
-    for key in dictionary.keys():
-        serializable_dictionary[key] = df_to_str_dict(dictionary[key])
-
-    with open(file_path, 'wb') as json_file:  # 'wb' 모드로 열기 (orjson은 바이너리 모드 필요)
-        json_data = orjson.dumps(serializable_dictionary, option=orjson.OPT_INDENT_2)  # 2-스페이스 들여쓰기 옵션
-        json_file.write(json_data)
+#     with open(file_path, 'wb') as json_file:  # 'wb' 모드로 열기 (orjson은 바이너리 모드 필요)
+#         json_data = orjson.dumps(serializable_dictionary, option=orjson.OPT_INDENT_2)  # 2-스페이스 들여쓰기 옵션
+#         json_file.write(json_data)
         
-def save_dict_to_h5(file_path, dictionary):
-    # HDF5 파일을 'w' 모드로 열고 각 DataFrame을 저장
-    with pd.HDFStore(file_path, mode='w') as h5_file:
-        for key, df in dictionary.items():
-            # h5에 저장하기 적합한 형태로 key 변환
-            key_list = key.split('-')
-            modified_key = '_'.join(key_list)
-            # 각 DataFrame을 HDF5 파일의 그룹에 저장
-            h5_file.put(modified_key, df, format='table', complevel=5, complib='zlib')
+# def save_dict_to_h5(file_path, dictionary):
+#     # HDF5 파일을 'w' 모드로 열고 각 DataFrame을 저장
+#     with pd.HDFStore(file_path, mode='w') as h5_file:
+#         for key, df in dictionary.items():
+#             # h5에 저장하기 적합한 형태로 key 변환
+#             key_list = key.split('-')
+#             modified_key = '_'.join(key_list)
+#             # 각 DataFrame을 HDF5 파일의 그룹에 저장
+#             h5_file.put(modified_key, df, format='table', complevel=5, complib='zlib')
 
 def export_dict_data(file_path, df, type):
+    def df_to_str_dict(dataframe):
+        # DataFrame을 딕셔너리로 변환하고 키를 문자열로 설정하는 함수
+        dict_data = dataframe.to_dict()
+        str_dict_data = {str(k): {str(inner_k): inner_v for inner_k, inner_v in v.items()} for k, v in dict_data.items()}
+        return str_dict_data
+
     if type == '.h5':
         # HDF5 파일을 'w' 모드로 열고 각 DataFrame을 저장
         with pd.HDFStore(file_path, mode='w') as h5_file:
@@ -145,27 +145,58 @@ def export_dict_data(file_path, df, type):
                 modified_key = '_'.join(key_list)
                 # 각 DataFrame을 HDF5 파일의 그룹에 저장
                 h5_file.put(modified_key, df, format='table', complevel=5, complib='zlib')
+    
+    elif type == '.json':
+        serializable_dictionary = {}
+        for key in df.keys():
+            serializable_dictionary[key] = df_to_str_dict(df[key])
+
+        # with open(file_path, 'wb') as json_file:  # 'wb' 모드로 열기 (orjson은 바이너리 모드 필요)
+        #     json_data = orjson.dumps(serializable_dictionary, option=orjson.OPT_INDENT_2)  # 2-스페이스 들여쓰기 옵션
+        #     json_file.write(json_data)
+
 
 # JSON 파일로부터 딕셔너리를 불러오는 함수
-def load_dict_from_json(file_path):
-    with open(file_path, 'r') as json_file:
-        return json.load(json_file)
-    
-def load_dict_from_h5(file_path):
-    # 빈 딕셔너리 생성
+def import_dict_data(file_path, type):
     loaded_dict = {}
-
-    # HDF5 파일 열기
-    with pd.HDFStore(file_path, mode='r') as h5_file:
-        # 저장된 각 key를 순회하며 DataFrame으로 읽어와 딕셔너리에 추가
-        for key in h5_file.keys():
-            # `key[1:]`는 HDF5의 key가 '/'로 시작하기 때문에 이를 제거하기 위함
-            # h5 저장을 위해 '_'로 변환된 key를 '-'로 변환
-            key_list = key[1:].split('_')
-            modified_key = '-'.join(key_list)
-            loaded_dict[modified_key] = h5_file[key]
-
+    
+    if type == ".h5":
+        # HDF5 파일 열기
+        with pd.HDFStore(file_path, mode='r') as h5_file:
+            # 저장된 각 key를 순회하며 DataFrame으로 읽어와 딕셔너리에 추가
+            for key in h5_file.keys():
+                # `key[1:]`는 HDF5의 key가 '/'로 시작하기 때문에 이를 제거하기 위함
+                # h5 저장을 위해 '_'로 변환된 key를 '-'로 변환
+                key_list = key[1:].split('_')
+                modified_key = '-'.join(key_list)
+                loaded_dict[modified_key] = h5_file[key]
+    
+    elif type == '.json':
+        with open(file_path, 'r') as json_file:
+            loaded_dict = json.load(json_file)
+                
     return loaded_dict
+    
+    
+# def load_dict_from_json(file_path):
+#     with open(file_path, 'r') as json_file:
+#         return json.load(json_file)
+    
+# def load_dict_from_h5(file_path):
+#     # 빈 딕셔너리 생성
+#     loaded_dict = {}
+
+#     # HDF5 파일 열기
+#     with pd.HDFStore(file_path, mode='r') as h5_file:
+#         # 저장된 각 key를 순회하며 DataFrame으로 읽어와 딕셔너리에 추가
+#         for key in h5_file.keys():
+#             # `key[1:]`는 HDF5의 key가 '/'로 시작하기 때문에 이를 제거하기 위함
+#             # h5 저장을 위해 '_'로 변환된 key를 '-'로 변환
+#             key_list = key[1:].split('_')
+#             modified_key = '-'.join(key_list)
+#             loaded_dict[modified_key] = h5_file[key]
+
+#     return loaded_dict
 
 #############################################
 #                  시간 관련                #

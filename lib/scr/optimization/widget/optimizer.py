@@ -2,6 +2,9 @@ from ..common import *
 from .common import *
 
 from ..optimizer import Optimizer
+from ...pyqt.widget import (ScrollWidget, CustomLineEdit, CustomMessageBox, CustomFigureCanvas)
+
+import random
 
 class OptimizationWidget(QWidget):
     def __init__(self, file_directory, json_data_manager, json_data_viewer, parent=None):
@@ -14,7 +17,12 @@ class OptimizationWidget(QWidget):
         self.json_data_viewer = json_data_viewer
         
         # Optimizer 생성
-        self.optimizer = Optimizer(file_directory, self.parent)
+        self.optimizer = Optimizer(
+            file_directory, 
+            [self.update_pre_training_loss_animation,
+             self.update_full_training_loss_animation,
+             self.update_embedded_vector_animation], 
+            self.parent)
         
         # json data 목록 클릭 이벤트 등록
         self.json_data_viewer.on_item_clicked += self.__on_target_data_changed
@@ -36,7 +44,7 @@ class OptimizationWidget(QWidget):
         self.pre_training_learning_rate = None
         self.full_training_epoch = None
         self.full_training_learning_rate = None
-        self.lambda_1 = None
+        self.lambda_value = None
         self.lambda_2 = None
         self.lambda_3 = None
         
@@ -45,9 +53,9 @@ class OptimizationWidget(QWidget):
         self.__set_pre_training_learning_rate (self.widgets["pre_training_learning_rate_line_edit"] .text())
         self.__set_full_training_epoch        (self.widgets["full_training_epoch_line_edit"]        .text())
         self.__set_full_training_learning_rate(self.widgets["full_training_learning_rate_line_edit"].text())
-        self.__set_lambda_1                   (self.widgets["lambda_1_line_edit"]                   .text())
-        self.__set_lambda_2                   (self.widgets["lambda_2_line_edit"]                   .text())
-        self.__set_lambda_3                   (self.widgets["lambda_3_line_edit"]                   .text())
+        self.__set_lambda                     (self.widgets["lambda_value_line_edit"]               .text())
+        # self.__set_lambda_2                   (self.widgets["lambda_2_line_edit"]                   .text())
+        # self.__set_lambda_3                   (self.widgets["lambda_3_line_edit"]                   .text())
         
         ##### data 분류 기준 설정 #####
         # data name for training dataset
@@ -65,6 +73,8 @@ class OptimizationWidget(QWidget):
         # target data state
         self.data_state = "refined"
         
+        self.flag = 0
+         
     def __clear(self):
         self.training_input_dataset_name_list.clear()
         self.training_output_dataset_name_list.clear()
@@ -112,23 +122,23 @@ class OptimizationWidget(QWidget):
                     self.training_output_dataset_name_list.append(item)
                     self.__append_text_to_text_field(self.widgets["training_output_text_field"], data_name)
                     
-            # validation dataset 분류
-            if data_name in self.data_name_for_validation_dataset:
-                if data_type == self.input_data_type:
-                    self.validation_input_dataset_name_list.append(item)
-                    self.__append_text_to_text_field(self.widgets["validation_input_text_field"], data_name)
-                elif data_type == self.output_data_type:
-                    self.validation_output_dataset_name_list.append(item)
-                    self.__append_text_to_text_field(self.widgets["validation_output_text_field"], data_name)
+            # # validation dataset 분류
+            # if data_name in self.data_name_for_validation_dataset:
+            #     if data_type == self.input_data_type:
+            #         self.validation_input_dataset_name_list.append(item)
+            #         self.__append_text_to_text_field(self.widgets["validation_input_text_field"], data_name)
+            #     elif data_type == self.output_data_type:
+            #         self.validation_output_dataset_name_list.append(item)
+            #         self.__append_text_to_text_field(self.widgets["validation_output_text_field"], data_name)
                     
-            # test dataset 분류
-            if data_name in self.data_name_for_test_dataset:
-                if data_type == self.input_data_type:
-                    self.test_input_dataset_name_list.append(item)
-                    self.__append_text_to_text_field(self.widgets["test_input_text_field"], data_name)
-                elif data_type == self.output_data_type:
-                    self.test_output_dataset_name_list.append(item)
-                    self.__append_text_to_text_field(self.widgets["test_output_text_field"], data_name)  
+            # # test dataset 분류
+            # if data_name in self.data_name_for_test_dataset:
+            #     if data_type == self.input_data_type:
+            #         self.test_input_dataset_name_list.append(item)
+            #         self.__append_text_to_text_field(self.widgets["test_input_text_field"], data_name)
+            #     elif data_type == self.output_data_type:
+            #         self.test_output_dataset_name_list.append(item)
+            #         self.__append_text_to_text_field(self.widgets["test_output_text_field"], data_name)  
         
     def __add_widget_to_layout(self, target_layout, key, widget, height, type, initial_text=""):
         if type == "label":
@@ -183,14 +193,14 @@ class OptimizationWidget(QWidget):
         self.__add_widget_to_layout(dataset_widget_container_layout, "training_input_text_field",    QLabel("",                                self.parent), 40, "text field")
         self.__add_widget_to_layout(dataset_widget_container_layout, "training_output_label",        QLabel("Selected training output data",   self.parent), 20, "label")
         self.__add_widget_to_layout(dataset_widget_container_layout, "training_output_text_field",   QLabel("",                                self.parent), 40, "text field")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "validation_input_label",       QLabel("Selected validation input data",  self.parent), 20, "label")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "validation_input_text_field",  QLabel("",                                self.parent), 40, "text field")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "validation_output_label",      QLabel("Selected validation output data", self.parent), 20, "label")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "validation_output_text_field", QLabel("",                                self.parent), 40, "text field")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "test_input_label",             QLabel("Selected test input data",        self.parent), 20, "label")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "test_input_text_field",        QLabel("",                                self.parent), 40, "text field")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "test_output_label",            QLabel("Selected test output data",       self.parent), 20, "label")
-        self.__add_widget_to_layout(dataset_widget_container_layout, "test_output_text_field",       QLabel("",                                self.parent), 40, "text field")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "validation_input_label",       QLabel("Selected validation input data",  self.parent), 20, "label")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "validation_input_text_field",  QLabel("",                                self.parent), 40, "text field")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "validation_output_label",      QLabel("Selected validation output data", self.parent), 20, "label")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "validation_output_text_field", QLabel("",                                self.parent), 40, "text field")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "test_input_label",             QLabel("Selected test input data",        self.parent), 20, "label")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "test_input_text_field",        QLabel("",                                self.parent), 40, "text field")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "test_output_label",            QLabel("Selected test output data",       self.parent), 20, "label")
+        # self.__add_widget_to_layout(dataset_widget_container_layout, "test_output_text_field",       QLabel("",                                self.parent), 40, "text field")
         
         # training parameter label 생성
         self.__add_container_label("Training parameter", 20)
@@ -200,23 +210,26 @@ class OptimizationWidget(QWidget):
         
         # training parameter 관련 ui 생성
         self.__add_widget_to_layout(parameter_container_layout, "pre_training_epoch_label",              QLabel("Pre training epoch",                           self.parent), 20, "label")
-        self.__add_widget_to_layout(parameter_container_layout, "pre_training_epoch_line_edit",          CustomLineEdit(self.__set_pre_training_epoch,          self.parent), 20, "line edit", "1000")
+        self.__add_widget_to_layout(parameter_container_layout, "pre_training_epoch_line_edit",          CustomLineEdit(self.__set_pre_training_epoch,          self.parent), 20, "line edit", "100")
         self.__add_widget_to_layout(parameter_container_layout, "full_training_epoch_label",             QLabel("Full training epoch",                          self.parent), 20, "label")
         self.__add_widget_to_layout(parameter_container_layout, "full_training_epoch_line_edit",         CustomLineEdit(self.__set_full_training_epoch,         self.parent), 20, "line edit", "1000")
         self.__add_widget_to_layout(parameter_container_layout, "pre_training_learning_rate_label",      QLabel("Pre training learning rate",                   self.parent), 20, "label")
         self.__add_widget_to_layout(parameter_container_layout, "pre_training_learning_rate_line_edit",  CustomLineEdit(self.__set_pre_training_learning_rate,  self.parent), 20, "line edit", "0.001")
         self.__add_widget_to_layout(parameter_container_layout, "full_training_learning_rate_label",     QLabel("Full training learning rate",                  self.parent), 20, "label")
         self.__add_widget_to_layout(parameter_container_layout, "full_training_learning_rate_line_edit", CustomLineEdit(self.__set_full_training_learning_rate, self.parent), 20, "line edit", "0.001")
-        self.__add_widget_to_layout(parameter_container_layout, "lambda_1_label",                        QLabel("Stage 1 lambda",                               self.parent), 20, "label")
-        self.__add_widget_to_layout(parameter_container_layout, "lambda_1_line_edit",                    CustomLineEdit(self.__set_lambda_1,                    self.parent), 20, "line edit", "0.2")
-        self.__add_widget_to_layout(parameter_container_layout, "lambda_2_label",                        QLabel("Stage 2 lambda",                               self.parent), 20, "label")
-        self.__add_widget_to_layout(parameter_container_layout, "lambda_2_line_edit",                    CustomLineEdit(self.__set_lambda_2,                    self.parent), 20, "line edit", "0.5")
-        self.__add_widget_to_layout(parameter_container_layout, "lambda_3_label",                        QLabel("Stage 3 lambda",                               self.parent), 20, "label")
-        self.__add_widget_to_layout(parameter_container_layout, "lambda_3_line_edit",                    CustomLineEdit(self.__set_lambda_3,                    self.parent), 20, "line edit", "0.8")
+        self.__add_widget_to_layout(parameter_container_layout, "lambda_label",                          QLabel("Lambda",                                       self.parent), 20, "label")
+        self.__add_widget_to_layout(parameter_container_layout, "lambda_value_line_edit",                CustomLineEdit(self.__set_lambda,                      self.parent), 20, "line edit", "0.5")
+        # self.__add_widget_to_layout(parameter_container_layout, "lambda_2_label",                        QLabel("Stage 2 lambda",                               self.parent), 20, "label")
+        # self.__add_widget_to_layout(parameter_container_layout, "lambda_2_line_edit",                    CustomLineEdit(self.__set_lambda_2,                    self.parent), 20, "line edit", "0.5")
+        # self.__add_widget_to_layout(parameter_container_layout, "lambda_3_label",                        QLabel("Stage 3 lambda",                               self.parent), 20, "label")
+        # self.__add_widget_to_layout(parameter_container_layout, "lambda_3_line_edit",                    CustomLineEdit(self.__set_lambda_3,                    self.parent), 20, "line edit", "0.8")
         
         # optimization 버튼 추가
         self.__add_widget_to_layout(self.scroll_widget, "optimization_button", QPushButton("Optimize sensor placement", self.parent), 20, "button")
         self.widgets["optimization_button"].clicked.connect(self.__start_optimization)
+        
+        # Optimization 진행 상황 표시할 figure widget 생성
+        self.__create_figure_widget()
 
         self.setStyleSheet(f"""
                             QWidget {{
@@ -311,16 +324,18 @@ class OptimizationWidget(QWidget):
     def __set_full_training_learning_rate(self, text):
         self.__check_text_input_validity(text, float, "full_training_learning_rate")
         
-    def __set_lambda_1(self, text):
-        self.__check_text_input_validity(text, float, "lambda_1", [0, 1])
+    def __set_lambda(self, text):
+        self.__check_text_input_validity(text, float, "lambda_value", [0, 1])
         
-    def __set_lambda_2(self, text):
-        self.__check_text_input_validity(text, float, "lambda_2", [0, 1])
+    # def __set_lambda_2(self, text):
+    #     self.__check_text_input_validity(text, float, "lambda_2", [0, 1])
         
-    def __set_lambda_3(self, text):
-        self.__check_text_input_validity(text, float, "lambda_3", [0, 1])
+    # def __set_lambda_3(self, text):
+    #     self.__check_text_input_validity(text, float, "lambda_3", [0, 1])
     
     def __start_optimization(self):
+        self.clear_canvas()
+        
         target_file_data = self.json_data_manager.file_data
         
         self.optimizer.set_dataset(self.__create_dataset(target_file_data, self.training_input_dataset_name_list), "training", "input")
@@ -333,7 +348,73 @@ class OptimizationWidget(QWidget):
             self.pre_training_learning_rate,
             self.full_training_epoch,
             self.full_training_learning_rate,
-            self.lambda_1,
+            self.lambda_value,
             self.lambda_2,
             self.lambda_3
         )
+        
+    def __init_canvas(self):
+        self.training_loss_ax.set_title("Pre training loss", color=UiStyle.get_color("content_text_color", "fraction"))
+        self.training_loss_ax.set_xlabel("Iteration",        color=UiStyle.get_color("content_text_color", "fraction"))
+        self.training_loss_ax.set_ylabel("Loss",             color=UiStyle.get_color("content_text_color", "fraction"))
+        
+        self.validation_loss_ax.set_title("Full training loss", color=UiStyle.get_color("content_text_color", "fraction"))
+        self.validation_loss_ax.set_xlabel("Iteration",         color=UiStyle.get_color("content_text_color", "fraction"))
+        self.validation_loss_ax.set_ylabel("Loss",              color=UiStyle.get_color("content_text_color", "fraction"))
+        
+        self.embedded_vector_ax.set_title("Embedded vector",   color=UiStyle.get_color("content_text_color", "fraction"))
+        self.embedded_vector_ax.set_xlabel("Wireframe number", color=UiStyle.get_color("content_text_color", "fraction"))
+        self.embedded_vector_ax.set_ylim(0, 1.2)
+        self.is_embedded_vector_ax_set = False
+        
+    def __create_figure_widget(self):
+        """다른 위젯에 배치할 figure_widget 위젯 생성"""
+        # Figure widget 생성
+        self.figure_widget = QWidget()
+        figure_layout = QVBoxLayout()
+        self.figure_widget.setLayout(figure_layout)
+        
+        # Loss 표시 canvas 생성
+        self.loss_plot_canvas = CustomFigureCanvas(padding=(0.05, 0.95, 0.85, 0.15), parent=self.parent)
+        self.loss_plot_canvas.set_grid(1, 2)
+        
+        # Embedded vector 표시 canvas 생성
+        self.embedded_Vector_canvas = CustomFigureCanvas(padding=(0.05, 0.95, 0.85, 0.15), parent=self.parent)
+        self.embedded_Vector_canvas.set_grid(1, 1)
+        
+        # 레이아웃 추가
+        figure_layout.addWidget(self.loss_plot_canvas, 2)
+        figure_layout.addWidget(self.embedded_Vector_canvas, 5)
+        
+        self.training_loss_ax, self.pre_training_loss_ani_handle = self.loss_plot_canvas.get_ani_ax(0, 0, UiStyle.get_plot_color(0))
+        self.validation_loss_ax, self.full_training_loss_ani_handle = self.loss_plot_canvas.get_ani_ax(0, 1, UiStyle.get_plot_color(1))
+        self.embedded_vector_ax, self.embedded_vector_ani_handle = self.embedded_Vector_canvas.get_ani_ax(0, 0, UiStyle.get_plot_color(2), True)
+        self.embedded_vector_ani_handle.set_auto_scale(False)
+        
+        self.__init_canvas()
+        
+    def get_figure_widget(self):
+        """figure_widget 반환"""
+        self.__create_figure_widget()
+        
+        return self.figure_widget
+    
+    def clear_canvas(self):
+        self.pre_training_loss_ani_handle.clear()
+        self.full_training_loss_ani_handle.clear()
+        self.embedded_vector_ani_handle.clear()
+        self.is_embedded_vector_ax_set = False
+        
+    def update_pre_training_loss_animation(self, training_loss):
+        self.pre_training_loss_ani_handle.add_plot(training_loss)
+        
+    def update_full_training_loss_animation(self, validation_loss):
+        self.full_training_loss_ani_handle.add_plot(validation_loss)
+        
+    def update_embedded_vector_animation(self, embedded_vector):
+        x_data = list(range(len(embedded_vector)))
+        if not self.is_embedded_vector_ax_set:
+            self.embedded_vector_ax.set_xlim(0, len(x_data))
+            self.embedded_Vector_canvas.draw()
+            self.is_embedded_vector_ax_set = True
+        self.embedded_vector_ani_handle.set_plot(x_data, embedded_vector)

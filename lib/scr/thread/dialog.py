@@ -2,6 +2,8 @@ from .common import *
 from .worker import *
 from PyQt5.QtCore import QCoreApplication
 
+from ..pyqt.widget import *
+
 class ProgressDialog(QDialog):
     def __init__(self, title, parent=None):
         super().__init__(parent)
